@@ -1,10 +1,5 @@
 (in-package #:cl-megolm)
 
-(defclass utility ()
-  ((utility
-    :accessor utility
-    :initarg :utility)))
-
 (defmethod check-error ((utility utility) to-check)
   (let ((er (%olm:utility-last-error (utility utility))))
     (string->condition er)
@@ -37,12 +32,12 @@
 (defun sha256 (input-string)
   (let ((util (gen-utility)))
     (prog1 (%sha256 util input-string)
-      (cffi:foreign-free (utility util)))))
+      (cleanup util))))
 
 (defun ed25519-verify-p (key message signature)
   (let ((util (gen-utility)))
     (prog1 (to-bool (%ed25519-verify util key message signature))
-      (cffi:foreign-free (utility util)))))
+      (cleanup util))))
 
 
 

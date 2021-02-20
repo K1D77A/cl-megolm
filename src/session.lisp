@@ -3,39 +3,13 @@
 (define-condition olm-session-error (condition)
   ())
 
-(defclass session ()
-  ((session
-    :accessor session
-    :initarg :session)
-   (session-key
-    :accessor session-key)))
 
-(defclass inbound-session (session)
-  ())
-
-(defclass outbound-session (session)
-  ())
 
 (defmethod check-error ((session session) to-check)
   (let ((er (%olm:session-last-error (session session))))
     (string->condition er)
     session))
 
-(defclass %olm-message ()
-  ((ciphertext
-    :accessor ciphertext
-    :initarg :ciphertext)
-   (message-type
-    :accessor message-type
-    :initarg :message-type)))
-
-(defclass olm-message (%olm-message)
-  ((message-type
-    :initform %olm:*message-type-message*)))
-
-(defclass olm-message-pre-key (%olm-message)
-  ((message-type
-    :initform %olm:*message-type-pre-key*)))
 
 (defmethod print-object ((obj olm-message) stream)
   (print-unreadable-object (obj stream)

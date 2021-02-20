@@ -2,11 +2,6 @@
 
 ;;;;copy of ;;;https://gitlab.matrix.org/matrix-org/olm/-/blob/master/python/olm/group_session.py
 
-(defclass inbound-group-session (session)
-  ())
-
-(defclass outbound-group-session (session)
-  ())
 
 (defmethod check-error ((inbound-group-session inbound-group-session) check-it)
   (let ((er (%olm:inbound-group-session-last-error (session inbound-group-session))))

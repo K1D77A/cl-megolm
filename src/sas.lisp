@@ -2,14 +2,6 @@
 ;;;;conversion of
 ;;;;https://gitlab.matrix.org/matrix-org/olm/-/blob/master/python/olm/sas.py
 
-(defclass sas ()
-  ((buf
-    :accessor buf
-    :initarg :buf)
-   (sas
-    :accessor sas
-    :initarg :sas)))
-
 (defmethod check-error ((sas sas) to-check)
   (let ((er (%olm:sas-last-error (sas sas))))
     (string->condition er)
@@ -20,7 +12,7 @@
          (sas (%olm:sas buf))
          (random-length (%olm:create-sas-random-length sas))
          (random-string (random-string random-length)))
-    (let ((obj (make-instance 'sas :sas sas :buf buf)))
+    (let ((obj (make-instance 'sas :sas sas)))
       (cffi:with-foreign-string (random random-string)
         (check-error obj (%olm:create-sas (sas obj) random random-length)))
       (when other-user-pubkey

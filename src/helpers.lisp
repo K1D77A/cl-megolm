@@ -1,7 +1,7 @@
 (in-package #:cl-megolm)
 
 (defmacro clean-after (list-of-vars &body body)
-  "Wraps body in an unwind-protect and then takes a list of lists, each list whose car is a pointer to foreign string and the cdr the length, then 0s the foreign string."
+  "Wraps body in an unwind-protect and then takes a list of lists, each list whose car is a pointer to foreign string and the second the length, then 0s the foreign string."
   (let ((code
           (mapcar (lambda (pointer-list)
                     `(let ((len ,(second  pointer-list))
@@ -44,8 +44,7 @@ in the same order as the bindings so for example if bindings were the following:
     str))
 
 (defmacro %pickle (object object-type accessor password)
-  "An example of how common calls like 'pickle' could be written, but for the sake
-of clarity I am just going to rewrite each version as I'm copying the python code."
+  "An example of how common calls like 'pickle' could be written"
   (let* ((type-string object-type)
          (accessor (intern (string-upcase accessor) :cl-megolm))
          (len-fun (intern (string-upcase
@@ -61,7 +60,8 @@ of clarity I am just going to rewrite each version as I'm copying the python cod
            (clean-after ((,foreign-key ,foreign-key-length))
                         (cffi:with-foreign-pointer-as-string (,p-buffer ,p-length)
                           (funcall ',pickle-fun (funcall ',accessor ,object)
-                                   ,foreign-key ,foreign-key-length ,p-buffer ,p-length))))))))
+                                   ,foreign-key ,foreign-key-length
+                                   ,p-buffer ,p-length))))))))
 
 (defun to-bool (n)
   (cond ((= n 0)

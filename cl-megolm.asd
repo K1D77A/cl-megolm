@@ -12,18 +12,18 @@ Borodust for creating the initial bindings using Claw."
   :depends-on (#:ironclad
                #:claw-olm
                #:jonathan
-               #:alexandria
                #:str
-               #:babel)
+               #:alexandria)
   :components ((:module :src
                 :components 
                 ((:file "package")
                  (:file "olm")
                  (:file "conditions")
+                 (:file "classes")
                  (:file "helpers")
                  (:file "utility")
                  (:file "session")
-                 (:file "account" :depends-on ("session"))
-                 (:file "group-session" :depends-on ("session"))
+                 (:file "account") 
+                 (:file "group-session")
                  (:file "pk")
                  (:file "sas")))))

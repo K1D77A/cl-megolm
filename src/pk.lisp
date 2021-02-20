@@ -3,58 +3,15 @@
 ;;;;copy of
 ;;;;https://gitlab.matrix.org/matrix-org/olm/-/blob/master/python/olm/pk.py
 
-
-
-(defclass pk-message ()
-  ((ephermal
-    :accessor ephemeral
-    :initarg :ephemeral)
-   (mac
-    :accessor mac
-    :initarg :mac)
-   (ciphertext
-    :accessor ciphertext
-    :initarg :ciphertext)))
-
-(defclass pk-encryption ()
-  ((buf
-    :accessor buf
-    :initarg :buf)
-   (pk-encrypt
-    :accessor pk-encrypt
-    :initarg :pk-encrypt)))
-
 (defmethod check-error ((pk-encryption pk-encryption) to-check)
   (let ((er (%olm:pk-encryption-last-error (pk-encrypt pk-encryption))))
     (string->condition er)
     pk-encryption))
 
-(defclass pk-decryption ()
-  ((buf
-    :accessor buf
-    :initarg :buf)
-   (pk-decrypt
-    :accessor pk-decrypt
-    :initarg :pk-decrypt)
-   (public-key
-    :accessor public-key
-    :initarg :public-key)))
-
 (defmethod check-error ((pk-decryption pk-decryption) to-check)
   (let ((er (%olm:pk-decryption-last-error (pk-decrypt pk-decryption))))
     (string->condition er)
     pk-decryption))
-
-(defclass pk-signing ()
-  ((buf
-    :accessor buf
-    :initarg :buf)
-   (pk-sign
-    :accessor pk-sign
-    :initarg :pk-sign)
-   (public-key
-    :accessor public-key
-    :initarg :public-key)))
 
 (defmethod check-error ((pk-signing pk-signing) to-check)
   (let ((er (%olm:pk-signing-last-error (pk-sign pk-signing))))
@@ -77,7 +34,7 @@
     (cffi:with-foreign-string ((byte-key byte-key-len) recipient-key)
       (clean-after ((byte-key byte-key-len))
         (%olm:pk-encryption-set-recipient-key pk-enc byte-key byte-key-len)))
-    (make-instance 'pk-encryption :pk-encrypt pk-enc :buf buf)))
+    (make-instance 'pk-encryption :pk-encrypt pk-enc)))
 
 (defmethod encrypt ((pk pk-encryption) (plaintext string))
   "Returns the encrypted pk-message instance.
@@ -124,8 +81,7 @@
 later"
   (let ((buf
           (cffi:foreign-string-alloc (make-string (%olm:pk-decryption-size)))))
-    (make-instance 'pk-decryption :public-key nil
-                                  :buf buf
+    (make-instance 'pk-decryption :public-key nil                   
                                   :pk-decrypt (%olm:pk-decryption buf))))
 
 (defun make-pk-decryption ()
@@ -134,12 +90,14 @@ later"
   (let* ((pk (gen-pk-decryption))
          (key-len (%olm:pk-key-length))
          (random-len (%olm:pk-private-key-length)))
-    (cffi:with-foreign-pointer-as-string (random-buf random-len)
-      (setf (public-key pk)
-            (cffi:with-foreign-pointer-as-string (key-buffer key-len)
-              (let ((ret (%olm:pk-key-from-private
-                          (pk-decrypt pk) key-buffer key-len random-buf random-len)))
-                (check-error pk ret)))))
+    (cffi:with-foreign-strings  ((random-buf (make-string random-len))
+                                 (key-buffer (make-string key-len)))
+
+      (let ((ret (%olm:pk-key-from-private (pk-decrypt pk)
+                                           key-buffer key-len
+                                           random-buf random-len)))
+        (check-error pk ret)
+        (setf (public-key pk) (cffi:foreign-string-to-lisp key-buffer))))
     pk))
 
 (defmethod pickle ((pk pk-decryption) (passphrase string))
@@ -220,8 +178,7 @@ session then the error message for the condition 'bad-account-key is signalled.
          (signing (make-instance 'pk-signing))
          (buf (cffi:foreign-string-alloc (make-string (%olm:pk-signing-size))))
          (res nil))
-    (setf (buf signing) buf
-          (pk-sign signing) (%olm:pk-signing buf))
+    (setf (pk-sign signing) (%olm:pk-signing buf))
     (cffi:with-foreign-strings ((seed-buffer seed)
                                 ((pubkey-buf pubkey-len)
                                  (make-string (%olm:pk-signing-public-key-length))))

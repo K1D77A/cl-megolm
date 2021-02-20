@@ -1,15 +1,6 @@
 (in-package #:cl-megolm)
 ;;;;copy of ;;;;https://gitlab.matrix.org/matrix-org/olm/-/blob/master/python/olm/account.py
 
-(defclass account ()
-  ((account
-    :accessor account
-    :initarg :account)
-   (conditions
-    :accessor conditions
-    :initform (make-hash-table :test #'equal)
-    :allocation :class)))
-
 (defun clear-account (account)
   (%olm:clear-account account))
 
@@ -51,14 +42,13 @@ failure."
       ;; need to do an unwind-protect, allocate, free either in your
       ;; own macro or manually.
       (clean-after ((foreign-key foreign-key-length))
-        (cffi:with-foreign-pointer-as-string (p-buffer p-length)
-          (check-error account
-                       (%olm:pickle-account (account account)
-                                            foreign-key
-                                            foreign-key-length
-                                            p-buffer
-                                            p-length)))))
-    account))
+                   (cffi:with-foreign-pointer-as-string (p-buffer p-length)
+                     (check-error account
+                                  (%olm:pickle-account (account account)
+                                                       foreign-key
+                                                       foreign-key-length
+                                                       p-buffer
+                                                       p-length)))))))
 
 
 ;;not working
