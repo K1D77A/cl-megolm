@@ -1,15 +1,9 @@
 (in-package #:cl-megolm)
 
-(define-condition olm-session-error (condition)
-  ())
-
-
-
 (defmethod check-error ((session session) to-check)
   (let ((er (%olm:session-last-error (session session))))
     (string->condition er)
     session))
-
 
 (defmethod print-object ((obj olm-message) stream)
   (print-unreadable-object (obj stream)
@@ -19,7 +13,7 @@
               (#.%olm:*message-type-message* "MESSAGE"))
             (ciphertext obj))))
 
-(defun %new-olm-message (ciphertext message-type)
+(defun %make-olm-message (ciphertext message-type)
   (cond ((= message-type %olm:*message-type-message*)
          (make-instance 'olm-message :ciphertext ciphertext
                                      :message-type message-type))
@@ -28,19 +22,18 @@
                                              :message-type message-type))
         (t (error 'invalid-message-type :message-type message-type))))
 
-(defun new-olm-pre-key-message (ciphertext)
-  "Create a new Olm prekey message with the supplied ciphertext"
-  (%new-olm-message ciphertext %olm:*message-type-pre-key*))
+(defun make-olm-pre-key-message (ciphertext)
+  "Create a make Olm prekey message with the supplied ciphertext"
+  (%make-olm-message ciphertext %olm:*message-type-pre-key*))
 
-(defun new-olm-message (ciphertext)
+(defun make-olm-message (ciphertext)
   "Create a new Olm message with the supplied ciphertext"
-  (%new-olm-message ciphertext %olm:*message-type-message*))
-
+  (%make-olm-message ciphertext %olm:*message-type-message*))
 
 (defmethod clear-session ((session session))
   (%olm:clear-session (session session)))
 
-(defun new-session ()
+(defun make-session ()
   (let* ((buf (cffi:foreign-string-alloc (%olm:session-size)))
          (session (%olm:session buf)))
     (make-instance 'session :session session)))
@@ -78,7 +71,7 @@
     (cffi:with-foreign-strings (((byte-key byte-key-len) passphrase)
                                 (pickle-buffer pickle))
       (clean-after ((byte-key byte-key-len))
-        (let* ((session (new-session))
+        (let* ((session (make-session))
                (res (%olm:unpickle-session (session session)
                                            byte-key byte-key-len
                                            pickle-buffer (length pickle))))
@@ -105,7 +98,7 @@
                                                random-buf ran-len
                                                cipher-buf cipher-buf-len))
             (setf res (cffi:foreign-string-to-lisp cipher-buf))))))
-    (%new-olm-message res message-type)))
+    (%make-olm-message res message-type)))
 
 (defmethod decrypt ((session session) (message %olm-message))
   "Decrypts a message using the session. Returns the plaintext string
@@ -171,8 +164,8 @@ condition signalled will be * 'bad-message-format."
 
 
 
-(defmethod new-inbound-session ((account account) (message %olm-message)
-                                (id-key string))
+(defmethod make-inbound-session ((account account) (message %olm-message)
+                                 (id-key string))
   "Create a new inbound Olm session.
 
         create a new in-bound session for sending/receiving messages from an
@@ -187,7 +180,7 @@ condition signalled will be * 'bad-message-format."
   (cffi:with-foreign-strings (((id-key-buf id-key-buf-len) id-key)
                               ((message-buf message-buf-len) (ciphertext message)))
     (let ((inbound-session (make-instance 'inbound-session
-                                          :session (session (new-session)))))
+                                          :session (session (make-session)))))
       (check-error inbound-session
                    (%olm:create-inbound-session-from (session inbound-session)
                                                      (account account)
@@ -195,22 +188,22 @@ condition signalled will be * 'bad-message-format."
                                                      message-buf message-buf-len))
       inbound-session)))
 
-(defmethod new-inbound-session ((account account) (message %olm-message)
-                                (id-key string))
+(defmethod make-inbound-session ((account account) (message %olm-message)
+                                 (id-key string))
   ""
   (cffi:with-foreign-string ((message-buf message-buf-len) (ciphertext message))
     (let ((inbound-session (make-instance 'inbound-session
-                                          :session (session (new-session)))))
+                                          :session (session (make-session)))))
       (check-error inbound-session
                    (%olm:create-inbound-session (session inbound-session)
                                                 (account account)
                                                 message-buf message-buf-len))
       inbound-session)))
 
-(defmethod new-outbound-session ((account account)(one-time-key string)
-                                 (id-key string))
+(defmethod make-outbound-session ((account account)(one-time-key string)
+                                  (id-key string))
   (let ((outbound-session (make-instance 'outbound-session
-                                         :session (session (new-session)))))
+                                         :session (session (make-session)))))
     (cffi:with-foreign-strings  (((id-key-buf id-key-buf-len) id-key)
                                  ((otk-buf otk-buf-len) one-time-key)
                                  ((random-buf random-buf-len)

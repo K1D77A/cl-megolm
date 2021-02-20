@@ -9,18 +9,18 @@
            #:outbound-session
            #:olm-message
            #:olm-message-pre-key
-           #:new-olm-message
-           #:new-olm-pre-key-message
+           #:make-olm-message
+           #:make-olm-pre-key-message
            #:clear-session
-           #:new-session
+           #:make-session
            #:pickle
            #:from-pickle
            #:encrypt
            #:decrypt
            #:id
            #:matchesp
-           #:new-inbound-session
-           #:new-outbound-session
+           #:make-inbound-session
+           #:make-outbound-session
            #:olm-error
            #:condition-missing
            #:invalid-message-type
@@ -65,16 +65,16 @@
            #:sign
            #:inbound-group-session
            #:outbound-group-session
-           #:new-inbound-group-session
+           #:make-inbound-group-session
            #:export-session
            #:first-known-index
            #:import-session
-           #:new-outbound-group-session
+           #:make-outbound-group-session
            #:message-index
            #:session-key
            #:account
            #:clear-account
-           #:new-account
+           #:make-account
            #:identity-keys
            #:mark-one-time-keys
            #:mark-keys-published

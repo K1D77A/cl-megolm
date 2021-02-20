@@ -18,7 +18,7 @@
     (string->condition er)
     pk-signing))
 
-(defun new-pk-message (ephemeral-key mac ciphertext)
+(defun make-pk-message (ephemeral-key mac ciphertext)
   (make-instance 'pk-message :ciphertext ciphertext :mac mac
                              :ephemeral ephemeral-key))
 

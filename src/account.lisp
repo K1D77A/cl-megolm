@@ -14,7 +14,7 @@
     (string->condition er)
     account))
 
-(defun new-account ()
+(defun make-account ()
   "Create a new Olm account. Creates a new account and its matching identity key pair.
 Signals 'olm-account-error on failure. If there weren't enough random bytes
 signals 'olm-account-not-enough-random."
@@ -71,7 +71,7 @@ failure."
 ;;   (cffi:with-foreign-string ((foreign-key foreign-key-length) passphrase)
 ;;     (cffi:with-foreign-string ((pickle-str pickle-len) pickle)
 ;;       (clean-after ((foreign-key foreign-key-length))
-;;         (let ((ret (%olm:unpickle-account (account (new-account)) foreign-key
+;;         (let ((ret (%olm:unpickle-account (account (make-account)) foreign-key
 ;;                                           foreign-key-length
 ;;                                           pickle-str pickle-len)))
 ;;           (check-error acc))))))

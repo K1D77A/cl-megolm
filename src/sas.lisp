@@ -16,7 +16,8 @@
       (cffi:with-foreign-string (random random-string)
         (check-error obj (%olm:create-sas (sas obj) random random-length)))
       (when other-user-pubkey
-        (set-pubkey sas other-user-pubkey)))))
+        (set-pubkey sas other-user-pubkey))
+      obj)))
 
 (defmethod set-pubkey ((sas sas) (pubkey string))
   "Set the public key of the other user.
