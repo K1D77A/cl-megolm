@@ -3,20 +3,6 @@
 ;;;;copy of
 ;;;;https://gitlab.matrix.org/matrix-org/olm/-/blob/master/python/olm/pk.py
 
-(defmethod check-error ((pk-encryption pk-encryption) to-check)
-  (let ((er (%olm:pk-encryption-last-error (pk-encrypt pk-encryption))))
-    (string->condition er)
-    pk-encryption))
-
-(defmethod check-error ((pk-decryption pk-decryption) to-check)
-  (let ((er (%olm:pk-decryption-last-error (pk-decrypt pk-decryption))))
-    (string->condition er)
-    pk-decryption))
-
-(defmethod check-error ((pk-signing pk-signing) to-check)
-  (let ((er (%olm:pk-signing-last-error (pk-sign pk-signing))))
-    (string->condition er)
-    pk-signing))
 
 (defun make-pk-message (ephemeral-key mac ciphertext)
   (make-instance 'pk-message :ciphertext ciphertext :mac mac

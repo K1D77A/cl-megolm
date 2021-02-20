@@ -2,18 +2,6 @@
 
 ;;;;copy of ;;;https://gitlab.matrix.org/matrix-org/olm/-/blob/master/python/olm/group_session.py
 
-
-(defmethod check-error ((inbound-group-session inbound-group-session) check-it)
-  (let ((er (%olm:inbound-group-session-last-error (session inbound-group-session))))
-    (string->condition er)
-    inbound-group-session))
-
-(defmethod check-error ((outbound-group-session outbound-group-session) check-it)
-  (let ((er (%olm:outbound-group-session-last-error
-             (session outbound-group-session))))
-    (string->condition er)
-    outbound-group-session))
-
 (defun gen-inbound-group-session ()
   (let* ((size (%olm:inbound-group-session-size)))
     (cffi:with-foreign-string (buf (make-string size))

@@ -1,10 +1,5 @@
 (in-package #:cl-megolm)
 
-(defmethod check-error ((utility utility) to-check)
-  (let ((er (%olm:utility-last-error (utility utility))))
-    (string->condition er)
-    utility))
-
 (defun gen-utility ()
   (let ((buf (cffi:foreign-string-alloc (make-string (%olm:utility-size)))))
     (make-instance 'utility :utility (%olm:utility buf))))

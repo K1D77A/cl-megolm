@@ -1,5 +1,22 @@
 (in-package #:cl-megolm)
 
+(defgeneric %check-error (object to-check)
+  (:documentation "This generic is used to convert between the error strings and
+lisp conditions. Firstly it will check if to-check is equal to (%olm:error) 
+if so it calls the most applicable method for class"))
+
+(defmethod %check-error :around (object to-check)
+  "Checks to make sure that TO-CHECK is actually in an error state before evaluating
+call-next-method"
+  (when (equal to-check (%olm:error))
+    (call-next-method)))
+
+(defmacro check-error (object form)
+  (alexandria:with-gensyms (res)
+    `(let ((,res ,form))
+       (%check-error ,object ,res)
+       ,res)))
+
 (defmacro clean-after (list-of-vars &body body)
   "Wraps body in an unwind-protect and then takes a list of lists, each list whose car is a pointer to foreign string and the second the length, then 0s the foreign string."
   (let ((code
@@ -58,10 +75,10 @@ in the same order as the bindings so for example if bindings were the following:
       `(let ((,p-length (funcall ',len-fun (funcall ',accessor ,object))))
          (cffi:with-foreign-string ((,foreign-key ,foreign-key-length) ,password)
            (clean-after ((,foreign-key ,foreign-key-length))
-                        (cffi:with-foreign-pointer-as-string (,p-buffer ,p-length)
-                          (funcall ',pickle-fun (funcall ',accessor ,object)
-                                   ,foreign-key ,foreign-key-length
-                                   ,p-buffer ,p-length))))))))
+             (cffi:with-foreign-pointer-as-string (,p-buffer ,p-length)
+               (funcall ',pickle-fun (funcall ',accessor ,object)
+                        ,foreign-key ,foreign-key-length
+                        ,p-buffer ,p-length))))))))
 
 (defun to-bool (n)
   (cond ((= n 0)

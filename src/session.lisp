@@ -1,10 +1,5 @@
 (in-package #:cl-megolm)
 
-(defmethod check-error ((session session) to-check)
-  (let ((er (%olm:session-last-error (session session))))
-    (string->condition er)
-    session))
-
 (defmethod print-object ((obj olm-message) stream)
   (print-unreadable-object (obj stream)
     (format stream "~A ~A"

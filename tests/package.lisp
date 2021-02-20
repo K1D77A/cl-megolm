@@ -1,5 +1,5 @@
 ;;;; package.lisp
 
 (defpackage #:cl-megolm-tests
-  (:use #:cl)
+  (:use #:cl #:lisp-unit #:cl-megolm)
   (:nicknames #:megtest))

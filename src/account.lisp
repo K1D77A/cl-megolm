@@ -5,14 +5,9 @@
   (%olm:clear-account account))
 
 (defun gen-account ()
-  (let* ((size (%olm:account-size)))
-    (cffi:with-foreign-string (buf (make-string size))
-      (%olm:account buf))))
-
-(defmethod check-error ((account account) to-check)
-  (let ((er (%olm:account-last-error (account account))))
-    (string->condition er)
-    account))
+  (let* ((size (%olm:account-size))
+         (buf (cffi:foreign-string-alloc (make-string size))))
+    (%olm:account buf)))
 
 (defun make-account ()
   "Create a new Olm account. Creates a new account and its matching identity key pair.
@@ -42,13 +37,13 @@ failure."
       ;; need to do an unwind-protect, allocate, free either in your
       ;; own macro or manually.
       (clean-after ((foreign-key foreign-key-length))
-                   (cffi:with-foreign-pointer-as-string (p-buffer p-length)
-                     (check-error account
-                                  (%olm:pickle-account (account account)
-                                                       foreign-key
-                                                       foreign-key-length
-                                                       p-buffer
-                                                       p-length)))))))
+        (cffi:with-foreign-pointer-as-string (p-buffer p-length)
+          (check-error account
+                       (%olm:pickle-account (account account)
+                                            foreign-key
+                                            foreign-key-length
+                                            p-buffer
+                                            p-length)))))))
 
 
 ;;not working
@@ -122,7 +117,8 @@ failure."
     (cffi:with-foreign-string (ran (random-string len))
       (check-error account
                    (%olm:account-generate-one-time-keys (account account)
-                                                        n ran len)))))
+                                                        n ran len)))
+    t))
 
 (defmethod one-time-keys ((account account))
   "The public part of the one-time keys for this account."

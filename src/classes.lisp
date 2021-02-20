@@ -1,6 +1,10 @@
 (in-package #:cl-megolm)
 ;;;file contains all defined classes
 
+
+;;;;I could make a metaclass that makes sure that no method is called
+;;;;on a cleaned up instance
+
 (defgeneric cleanup (object)
   (:documentation "Used to free the pointer associated with the object. 
 Super important to call this when done using an object that needs it."))
@@ -9,6 +13,11 @@ Super important to call this when done using an object that needs it."))
   ((account
     :accessor account
     :initarg :account)))
+
+(defmethod %check-error ((account account) to-check)
+  (let ((er (%olm:account-last-error (account account))))
+    (string->condition er)
+    account))
 
 (defmethod cleanup ((account account))
   (cffi:foreign-free (account account)))
@@ -29,6 +38,11 @@ Super important to call this when done using an object that needs it."))
     :accessor pk-encrypt
     :initarg :pk-encrypt)))
 
+(defmethod %check-error ((pk-encryption pk-encryption) to-check)
+  (let ((er (%olm:pk-encryption-last-error (pk-encrypt pk-encryption))))
+    (string->condition er)
+    pk-encryption))
+
 (defmethod cleanup ((pk-encryption pk-encryption))
   (cffi:foreign-free (pk-encrypt pk-encryption)))
 
@@ -39,6 +53,11 @@ Super important to call this when done using an object that needs it."))
    (public-key
     :accessor public-key
     :initarg :public-key)))
+
+(defmethod %check-error ((pk-decryption pk-decryption) to-check)
+  (let ((er (%olm:pk-decryption-last-error (pk-decrypt pk-decryption))))
+    (string->condition er)
+    pk-decryption))
 
 (defmethod cleanup ((pk-decryption pk-decryption))
   (cffi:foreign-free (pk-decrypt pk-decryption)))
@@ -51,6 +70,11 @@ Super important to call this when done using an object that needs it."))
     :accessor public-key
     :initarg :public-key)))
 
+(defmethod %check-error ((pk-signing pk-signing) to-check)
+  (let ((er (%olm:pk-signing-last-error (pk-sign pk-signing))))
+    (string->condition er)
+    pk-signing))
+
 (defmethod cleanup ((pk-signing pk-signing))
   (cffi:foreign-free (pk-sign pk-signing)))
 
@@ -59,12 +83,22 @@ Super important to call this when done using an object that needs it."))
     :accessor sas
     :initarg :sas)))
 
+(defmethod %check-error ((sas sas) to-check)
+  (let ((er (%olm:sas-last-error (sas sas))))
+    (string->condition er)
+    sas))
+
 (defclass session ()
   ((session
     :accessor session
     :initarg :session)
    (session-key
     :accessor session-key)))
+
+(defmethod %check-error ((session session) to-check)
+  (let ((er (%olm:session-last-error (session session))))
+    (string->condition er)
+    session))
 
 (defmethod cleanup ((session session))
   (cffi:foreign-free (session session)))
@@ -78,8 +112,19 @@ Super important to call this when done using an object that needs it."))
 (defclass inbound-group-session (session)
   ())
 
+(defmethod %check-error ((inbound-group-session inbound-group-session) check-it)
+  (let ((er (%olm:inbound-group-session-last-error (session inbound-group-session))))
+    (string->condition er)
+    inbound-group-session))
+
 (defclass outbound-group-session (session)
   ())
+
+(defmethod %check-error ((outbound-group-session outbound-group-session) check-it)
+  (let ((er (%olm:outbound-group-session-last-error
+             (session outbound-group-session))))
+    (string->condition er)
+    outbound-group-session))
 
 (defclass %olm-message ()
   ((ciphertext
@@ -101,6 +146,11 @@ Super important to call this when done using an object that needs it."))
   ((utility
     :accessor utility
     :initarg :utility)))
+
+(defmethod %check-error ((utility utility) to-check)
+  (let ((er (%olm:utility-last-error (utility utility))))
+    (string->condition er)
+    utility))
 
 (defmethod cleanup ((utility utility))
   (cffi:foreign-free (utility utility)))

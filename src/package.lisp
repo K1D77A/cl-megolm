@@ -28,6 +28,8 @@
            #:def-trivial-condition
            #:olm-bad-session-key
            #:not-enough-random
+           #:cleanup
+           #:max-one-time-keys
            #:output-buffer-too-small
            #:olm-input-buffer-too-small
            #:bad-account-key
@@ -77,7 +79,7 @@
            #:make-account
            #:identity-keys
            #:mark-one-time-keys
-           #:mark-keys-published
+           #:mark-keys-as-published
            #:generate-one-time-keys
            #:one-time-keys
            #:remove-one-time-keys))

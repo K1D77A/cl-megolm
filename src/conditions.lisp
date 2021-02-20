@@ -36,36 +36,12 @@ signalled."
           (error condition)
           (error 'condition-missing :searched-for string)))))
 
-(defgeneric check-error (object to-check)
-  (:documentation "This generic is used to convert between the error strings and
-lisp conditions. Firstly it will check if to-check is equal to (%olm:error) 
-if so it calls the most applicable method for class"))
 
-(defmethod check-error :around (object to-check)
-  "Checks to make sure that TO-CHECK is actually in an error state before evaluating
-call-next-method"
-  (when (= to-check (%olm:error))
-    (call-next-method)))
 
 (defmacro def-trivial-condition (name supers)
   (let ((string (str:replace-all "-" "_" (string-upcase (format nil "~A" name)))))
     `(prog1 (define-condition ,name ,supers ())
        (setf (gethash ,string *conditions*) ',name))))
-
-;; (define-condition pk-encryption-error (olm-error)
-;;   ())
-
-;; (define-condition pk-decryption-error (olm-error)
-;;   ())
-
-;; (define-condition pk-signing-error (olm-error)
-;;   ())
-
-;; (define-condition group-session-error (olm-error)
-;;   ())
-
-;; (define-condition account-error (olm-error)
-;;   ())
 
 (def-trivial-condition olm-bad-session-key (olm-error))
 (def-trivial-condition not-enough-random (olm-error))

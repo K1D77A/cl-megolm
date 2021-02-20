@@ -2,11 +2,6 @@
 ;;;;conversion of
 ;;;;https://gitlab.matrix.org/matrix-org/olm/-/blob/master/python/olm/sas.py
 
-(defmethod check-error ((sas sas) to-check)
-  (let ((er (%olm:sas-last-error (sas sas))))
-    (string->condition er)
-    sas))
-
 (defun make-sas (&optional other-user-pubkey)
   (let* ((buf (cffi:foreign-string-alloc (make-string  (%olm:sas-size))))
          (sas (%olm:sas buf))
