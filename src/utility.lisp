@@ -6,14 +6,15 @@
 
 (defmethod %ed25519-verify ((utility utility) (key string) (message string)
                             (signature string))
-  (cffi:with-foreign-strings (((key-buf key-len) key)
+  (cffi:with-foreign-strings (((key-buf key-len) key )
                               ((message-buf message-len) message)
                               ((signature-buf signature-len) signature))
     (clean-after ((message-buf message-len))
-      (check-error utility (%olm:ed25519-verify (utility utility)
-                                                key-buf key-len
-                                                message-buf message-len
-                                                signature-buf signature-len)))))
+      (check-error utility 
+                   (%olm:ed25519-verify (utility utility)
+                                        key-buf key-len
+                                        message-buf message-len
+                                        signature-buf signature-len)))))
 
 (defmethod %sha256 ((utility utility) (message string))
   (cffi:with-foreign-strings (((message-buf message-len) message)
@@ -26,12 +27,12 @@
 
 (defun sha256 (input-string)
   (let ((util (gen-utility)))
-    (prog1 (%sha256 util input-string)
+    (unwind-protect (%sha256 util input-string)
       (cleanup util))))
 
 (defun ed25519-verify-p (key message signature)
   (let ((util (gen-utility)))
-    (prog1 (to-bool (%ed25519-verify util key message signature))
+    (unwind-protect (to-bool (%ed25519-verify util key message signature))
       (cleanup util))))
 
 

@@ -29,28 +29,28 @@
   (%olm:clear-session (session session)))
 
 (defun make-session ()
-  (let* ((buf (cffi:foreign-string-alloc (%olm:session-size)))
+  (let* ((buf (cffi:foreign-string-alloc (make-string (%olm:session-size))))
          (session (%olm:session buf)))
     (make-instance 'session :session session)))
 
 (defmethod pickle ((session session) (passphrase string))
   "Store an Olm session.
-
         Stores a session as a base64 string. Encrypts the session using the
         supplied passphrase. Returns a byte object containing the base64
         encoded string of the pickled session."
-  (let* ((p-length (%olm:pickle-session-length (session session))))
-    (cffi:with-foreign-string ((foreign-key foreign-key-length) passphrase)
+  (let* ((p-length (%olm:pickle-session-length (session session)))
+         (res nil))
+    (cffi:with-foreign-strings (((foreign-key foreign-key-length) passphrase)
+                                (p-buffer (make-string p-length)))
       (clean-after ((foreign-key foreign-key-length))
-        (cffi:with-foreign-pointer-as-string (p-buffer p-length)
-          (check-error session
-                       (%olm:pickle-session (session session)
-                                            foreign-key
-                                            foreign-key-length
-                                            p-buffer
-                                            p-length)))))
-
-    session))
+        (check-error session
+                     (%olm:pickle-session (session session)
+                                          foreign-key
+                                          foreign-key-length
+                                          p-buffer
+                                          p-length))
+        (setf res (cffi:foreign-string-to-lisp p-buffer))))
+    res))
 
 (defmethod from-pickle ((type (eql :session)) (pickle string) (passphrase string))
   "Load a previously stored Olm session.
@@ -85,9 +85,10 @@
           (setf message-type (%olm:encrypt-message-type (session session)))
           (check-error session message-type)
           (cffi:with-foreign-strings (((cipher-buf cipher-buf-len)
-                                       (%olm:encrypt-message-length
-                                        (session session) plain-length))
-                                      (random-buf ran-len))
+                                       (make-string (%olm:encrypt-message-length
+                                                     (session session)
+                                                     plain-length)))
+                                      (random-buf (random-string ran-len)))
             (check-error session (%olm:encrypt (session session)
                                                plain-buf plain-length
                                                random-buf ran-len
@@ -195,15 +196,16 @@ condition signalled will be * 'bad-message-format."
                                                 message-buf message-buf-len))
       inbound-session)))
 
-(defmethod make-outbound-session ((account account)(one-time-key string)
+(defmethod make-outbound-session ((account account) (one-time-key string)
                                   (id-key string))
   (let ((outbound-session (make-instance 'outbound-session
                                          :session (session (make-session)))))
-    (cffi:with-foreign-strings  (((id-key-buf id-key-buf-len) id-key)
-                                 ((otk-buf otk-buf-len) one-time-key)
-                                 ((random-buf random-buf-len)
+    (cffi:with-foreign-strings (((id-key-buf id-key-buf-len) id-key)
+                                ((otk-buf otk-buf-len) one-time-key)
+                                ((random-buf random-buf-len)
+                                 (random-string 
                                   (%olm:create-outbound-session-random-length
-                                   (session outbound-session))))
+                                   (session outbound-session)))))
       (check-error outbound-session
                    (%olm:create-outbound-session (session outbound-session)
                                                  (account account)

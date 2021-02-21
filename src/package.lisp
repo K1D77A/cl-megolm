@@ -80,6 +80,9 @@
            #:identity-keys
            #:mark-one-time-keys
            #:mark-keys-as-published
+           #:clear
+           #:curve
+           #:ed25519
            #:generate-one-time-keys
            #:one-time-keys
            #:remove-one-time-keys))

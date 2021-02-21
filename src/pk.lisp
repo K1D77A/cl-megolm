@@ -76,7 +76,7 @@ later"
   (let* ((pk (gen-pk-decryption))
          (key-len (%olm:pk-key-length))
          (random-len (%olm:pk-private-key-length)))
-    (cffi:with-foreign-strings  ((random-buf (make-string random-len))
+    (cffi:with-foreign-strings  ((random-buf (random-string random-len))
                                  (key-buffer (make-string key-len)))
 
       (let ((ret (%olm:pk-key-from-private (pk-decrypt pk)
@@ -103,7 +103,6 @@ later"
                                                         p-length))))))
     res))
 
-;;;an actually functioning from-pickle
 (defmethod from-pickle ((type (eql :pk-decrypt)) (pickle string) (passphrase string))
   "Restore a previously stored PkDecryption object.
 Creates a PkDecryption object from a pickled base64 string. Decrypts
@@ -135,20 +134,20 @@ session then the error message for the condition 'bad-account-key is signalled.
                    (ciphertext ciphertext))
       pk-message
     (let ((res nil))
-      (cffi:with-foreign-strings (((ephemeral-key ephemeral-len) ephemeral)
-                                  ((mac-buf mac-buf-len) mac)
-                                  ((ciphertext-buf ciphertext-buf-len) ciphertext))
+      (cffi:with-foreign-strings ((ephemeral-key  ephemeral)
+                                  (mac-buf mac)
+                                  (ciphertext-buf  ciphertext))
         (let* ((max-pt-len (%olm:pk-max-plaintext-length (pk-decrypt pk)
-                                                         ciphertext-buf-len))
+                                                         (length ciphertext)))
                (plaintext-buffer
                  (cffi:foreign-string-alloc (make-string max-pt-len))))
           (unwind-protect
                (clean-after ((plaintext-buffer max-pt-len))
                  (check-error pk
                               (%olm:pk-decrypt (pk-decrypt pk)
-                                               ephemeral-key ephemeral-len
-                                               mac-buf mac-buf-len
-                                               ciphertext-buf ciphertext-buf-len
+                                               ephemeral-key (length ephemeral)
+                                               mac-buf (length mac)
+                                               ciphertext-buf (length ciphertext)
                                                plaintext-buffer max-pt-len))
                  (setf res (cffi:foreign-string-to-lisp plaintext-buffer)))
             (cffi:foreign-string-free plaintext-buffer))))
@@ -169,10 +168,9 @@ session then the error message for the condition 'bad-account-key is signalled.
                                 ((pubkey-buf pubkey-len)
                                  (make-string (%olm:pk-signing-public-key-length))))
       (clean-after ((seed-buffer seed-len))
-        (setf res (%olm:pk-signing-key-from-seed
-                   (pk-sign signing)
-                   pubkey-buf pubkey-len
-                   seed-buffer seed-len)))
+        (setf res (%olm:pk-signing-key-from-seed (pk-sign signing)
+                                                 pubkey-buf pubkey-len
+                                                 seed-buffer seed-len)))
       (check-error signing res)
       (setf (public-key signing)
             (cffi:foreign-string-to-lisp pubkey-buf)))

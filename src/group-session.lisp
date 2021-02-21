@@ -14,11 +14,12 @@ Start a new inbound group session, from a key exported from
 key is not valid base64 or 'olm-bad_session_key if the session key is
  invalid."
   (let ((session (gen-inbound-group-session))
+        (len (length session-key))
         (ret nil))
-    (cffi:with-foreign-string ((foreign-key foreign-key-length) session-key)
-      (clean-after ((foreign-key foreign-key-length))
-        (setf ret (%olm:init-inbound-group-session session foreign-key
-                                                   foreign-key-length))))
+    (cffi:with-foreign-string ((foreign-key foreign-key-len) session-key)
+      (clean-after ((foreign-key foreign-key-len))
+        (setf ret (%olm:init-inbound-group-session session
+                                                   foreign-key foreign-key-len))))
     (let ((new-session (make-instance 'inbound-group-session :session session)))
       (check-error new-session ret))))
 
@@ -29,34 +30,39 @@ key is not valid base64 or 'olm-bad_session_key if the session key is
         the supplied passphrase. Returns a byte object containing the base64
         encoded string of the pickled session."
   (let* ((p-length (%olm:pickle-inbound-group-session-length (session session))))
-    (cffi:with-foreign-string ((foreign-key foreign-key-length) passphrase)
+    (cffi:with-foreign-string ((foreign-key foreign-key-len) passphrase)
       (clean-after ((foreign-key foreign-key-length))
         (cffi:with-foreign-pointer-as-string (p-buffer p-length)
           (check-error session
                        (%olm:pickle-inbound-group-session (session session)
                                                           foreign-key
-                                                          foreign-key-length
+                                                          foreign-key-len
                                                           p-buffer
                                                           p-length)))))
 
     session))
 
-;; (defmethod from-pickle ((pickle string) (passphrase string))
-;;   "Load a previously stored inbound group session.
-;;  Loads an inbound group session from a pickled base64 string and returns
-;; an inbound-group-session object. Decrypts the session using the supplied
-;; passphrase. If the passphrase doesn't match the one used to encrypt
-;;  the session then signals 'olm-inbound-bad-account-key. If the base64
-;;  couldn't be decoded then signals 'olm-inbound-invalid-base-64.
-
-;; "
-;;   (cffi:with-foreign-string ((foreign-key foreign-key-length) passphrase)
-;;     (cffi:with-foreign-string ((pickle-str pickle-len) pickle)
-;;       (clean-after ((foreign-key foreign-key-length))
-;;         (%olm:unpickle-inbound (setf  (new-account)) foreign-key
-;;                                foreign-key-length
-;;                                pickle-str pickle-len)))
-;;     (check-error acc))))))
+(defmethod from-pickle
+    ((type (eql :inbound-group)) (pickle string) (passphrase string))
+  "Load a previously stored inbound group session.
+ Loads an inbound group session from a pickled base64 string and returns
+an inbound-group-session object. Decrypts the session using the supplied
+passphrase. If the passphrase doesn't match the one used to encrypt
+ the session then signals 'olm-inbound-bad-account-key. If the base64
+ couldn't be decoded then signals 'olm-inbound-invalid-base-64."
+  (let ((ret nil))
+    (cffi:with-foreign-strings (((byte-key byte-key-len) passphrase)
+                                (pickle-buffer pickle))
+      (clean-after ((byte-key byte-key-len))
+        (let* ((session (make-instance 'inbound-group-session
+                                       :session (gen-inbound-group-session)))
+               (res (%olm:unpickle-inbound-group-session
+                     (session session)
+                     byte-key byte-key-len
+                     pickle-buffer (length pickle))))
+          (setf ret session)
+          (check-error session res))))
+    ret))
 
 (defmethod decrypt ((session inbound-group-session) (cipher-text string))
   "Decrypt a message
@@ -156,7 +162,7 @@ Signals 'olm-invalid-base-64 if the session_key is not valid base64 or
   (let* ((session (gen-outbound-group-session))
          (len (%olm:init-outbound-group-session-random-length session))
          (ret nil))
-    (cffi:with-foreign-string (buffer (make-string len))
+    (cffi:with-foreign-string (buffer (random-string len))
       (setf ret (%olm:init-outbound-group-session session buffer len))
       (let ((new-session (make-instance 'outbound-group-session :session session)))
         (check-error new-session ret)))))
@@ -178,23 +184,29 @@ encoded string of the pickled session."
                                                            p-length)))))
     
     session))
-;;;need to implement, none of unpicklin have worked yet
-;; (defmethod from-pickle ((pickle string) (passphrase string))
-;;   "Load a previously stored inbound group session.
-;;  Loads an inbound group session from a pickled base64 string and returns
-;; an InboundGroupSession object. Decrypts the session using the supplied
-;; passphrase. If the passphrase doesn't match the one used to encrypt
-;;  the session then signals 'olm-inbound-bad-account-key. If the base64
-;;  couldn't be decoded then signals 'olm-inbound-invalid-base-64.
 
-;; "
-;;   (cffi:with-foreign-string ((foreign-key foreign-key-length) passphrase)
-;;     (cffi:with-foreign-string ((pickle-str pickle-len) pickle)
-;;       (clean-after ((foreign-key foreign-key-length))
-;;         (%olm:unpickle-inbound (setf  (new-account)) foreign-key
-;;                                foreign-key-length
-;;                                pickle-str pickle-len)))
-;;     (check-error acc))))))
+(defmethod from-pickle
+    ((type (eql :outbound-group))(pickle string) (passphrase string))
+  "Load a previously stored outbound group session.
+loads an outbound group session from a pickled base64 string and
+returns an outboundgroupsession object. decrypts the session using the
+supplied passphrase. raises olmsessionerror on failure. if the
+passphrase doesn't match the one used to encrypt the session then the
+condition signalled for the exception will be 'bad-account-key. if the
+base64 couldn't be decoded then the condition signalled will be'invalid-base64."
+  (let ((ret nil))
+    (cffi:with-foreign-strings (((byte-key byte-key-len) passphrase)
+                                (pickle-buffer pickle))
+      (clean-after ((byte-key byte-key-len))
+        (let* ((session (make-instance 'outbound-group-session
+                                       :session (gen-outbound-group-session)))
+               (res (%olm:unpickle-inbound-group-session
+                     (session session)
+                     byte-key byte-key-len
+                     pickle-buffer (length pickle))))
+          (setf ret session)
+          (check-error session res))))
+    ret))
 
 (defmethod encrypt ((session outbound-group-session) (plaintext string))
   "Encrypt a message. Returns the encrypted ciphertext."

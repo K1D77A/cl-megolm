@@ -17,6 +17,16 @@ call-next-method"
        (%check-error ,object ,res)
        ,res)))
 
+(defun plist-key-val (plist key)
+  "Gets the value associated with KEY in PLIST."
+  (let ((pos (position key plist)))
+    (if (integerp pos)
+        (nth (1+ pos) plist);;slow but who cares
+        nil)))
+
+(defmacro pkv (plist key)
+  `(plist-key-val ,plist ,key))
+
 (defmacro clean-after (list-of-vars &body body)
   "Wraps body in an unwind-protect and then takes a list of lists, each list whose car is a pointer to foreign string and the second the length, then 0s the foreign string."
   (let ((code

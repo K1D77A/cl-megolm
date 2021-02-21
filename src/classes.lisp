@@ -22,6 +22,9 @@ Super important to call this when done using an object that needs it."))
 (defmethod cleanup ((account account))
   (cffi:foreign-free (account account)))
 
+(defmethod clear ((account account))
+  (%olm:clear-account (account account)))
+
 (defclass pk-message ()
   ((ephermal
     :accessor ephemeral
