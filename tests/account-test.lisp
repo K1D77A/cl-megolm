@@ -3,19 +3,16 @@
 (account-test creation
   (assert-equal 4 (length (identity-keys account))))
 
-(account-test pickle ;;we don't have no password functionality
+(account-test pickle 
   (let* ((pickle (pickle account "abc"))  
          (df-keys (identity-keys account))
          (from-pickle (from-pickle :account pickle "abc")))
     (assert-equal (identity-keys from-pickle) df-keys)
     (cleanup from-pickle)))
 
-(define-test wrong-passphrase-pickle
-  (let* ((pickle (pickle account "abc"))  
-         (df-keys (identity-keys account))
-         (from-pickle (from-pickle :account pickle "abcd")))
-    (assert-error 'bad-account-key (identity-keys from-pickle) df-keys)
-    (cleanup from-pickle)))
+(account-test wrong-passphrase-pickle
+  (let* ((pickle (pickle account "abc")))
+    (assert-error 'bad-account-key (from-pickle :account pickle "abcd"))))
 
 (account-test one-time-keys
   (generate-one-time-keys account 10)
@@ -32,15 +29,20 @@
     (mark-keys-as-published account)
     (assert-false (second (one-time-keys account)))))
 
-(account-test valid-signature
-  (let* ((message "its a secret to everybody")
-         (sig (sign account message))
-         (signing-key (ed25519 account)))
-    (print sig)
-    (print signing-key)
-    (assert-true (ed25519-verify-p signing-key message sig))))
-      
-    
+;; (account-test valid-signature
+;;   (let* ((message "its a secret to everybody")
+;;          (sig (sign account message))
+;;          (signing-key (ed25519 account)))
+;;     (print sig)
+;;     (print signing-key)
+;;     (assert-true (ed25519-verify-p signing-key message sig))))
+
+;; (account-test invalid-signature
+
+;;(account-test signature-verification-twice
+
+
+
 
 
 

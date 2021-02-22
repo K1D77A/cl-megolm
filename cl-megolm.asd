@@ -14,6 +14,7 @@ Borodust for creating the initial bindings using Claw."
   :depends-on (#:ironclad
                #:claw-olm
                #:jonathan
+               #:cffi
                #:str
                #:alexandria)
   :components ((:module :src

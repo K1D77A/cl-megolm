@@ -90,7 +90,8 @@ then the condition signalled will be 'invalid-base64."
         Signs a message with the private ed25519 identity key of this account.
         Returns the signature.
         signals olm-account-error on failure."
-  (let ((len (%olm:account-signature-length (account account))))
+  (let ((len (%olm:account-signature-length (account account)))
+        (res nil))
     ;;(cffi:*default-foreign-encoding* :ascii))
     (cffi:with-foreign-strings (((foreign-m foreign-m-length) message)
                                 (output (make-string len)))
@@ -99,7 +100,8 @@ then the condition signalled will be 'invalid-base64."
                      (%olm:account-sign (account account)
                                         foreign-m foreign-m-length
                                         output len))
-        (cffi:foreign-string-to-lisp output)))))
+        (setf res (cffi:foreign-string-to-lisp output))))
+    res))
 
 (defmethod max-one-time-keys ((account account))
   "The maximum number of one-time keys the account can store."

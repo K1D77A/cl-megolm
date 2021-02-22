@@ -44,6 +44,7 @@ signalled."
        (setf (gethash ,string *conditions*) ',name))))
 
 (def-trivial-condition olm-bad-session-key (olm-error))
+(def-trivial-condition bad-signature (olm-error))
 (def-trivial-condition not-enough-random (olm-error))
 (def-trivial-condition output-buffer-too-small (olm-error))
 (def-trivial-condition olm-input-buffer-too-small (olm-error))
