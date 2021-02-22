@@ -13,17 +13,16 @@ Start a new inbound group session, from a key exported from
   an outbound group session. Signals 'olm-invalid-base64 if the session 
 key is not valid base64 or 'olm-bad_session_key if the session key is
  invalid."
-  (let* ((session (gen-inbound-group-session))        
-         (ret nil)
-         (sess-as-bytes (babel:string-to-octets session-key))
-         (sess-len (length sess-as-bytes)))
-    (cffi:with-pointer-to-vector-data (buffer sess-as-bytes)
+  (let ((session (gen-inbound-group-session))        
+        (ret nil))
+    (cffi:with-foreign-string ((buffer sess-len) session-key)
       (clean-after ((buffer sess-len))
-        (setf ret (%olm:init-inbound-group-session session
-                                                   buffer sess-len))))
-    (let ((new-session (make-instance 'inbound-group-session :session session)))
-      (check-error new-session ret)
-      new-session)))
+        (let ((new-session (make-instance 'inbound-group-session
+                                          :session session)))
+          (check-error new-session
+                       (%olm:init-inbound-group-session session buffer sess-len))
+          (setf ret new-session))))
+    ret))
 
 (defmethod pickle ((session inbound-group-session) (passphrase string))
   "Store an inbound group session.
@@ -31,16 +30,18 @@ key is not valid base64 or 'olm-bad_session_key if the session key is
         Stores a group session as a base64 string. Encrypts the session using
         the supplied passphrase. Returns a byte object containing the base64
         encoded string of the pickled session."
-  (let* ((p-length (%olm:pickle-inbound-group-session-length (session session))))
-    (cffi:with-foreign-string ((foreign-key foreign-key-len) passphrase)
-      (clean-after ((foreign-key foreign-key-len))
-        (cffi:with-foreign-pointer-as-string (p-buffer p-length)
-          (check-error session
-                       (%olm:pickle-inbound-group-session (session session)
-                                                          foreign-key
-                                                          foreign-key-len
-                                                          p-buffer
-                                                          p-length)))))))
+  (let* ((p-length (%olm:pickle-inbound-group-session-length (session session)))
+         (ret nil))
+    (cffi:with-foreign-strings (((foreign-key foreign-key-length) passphrase)
+                                (p-buffer (make-string p-length)))
+      (clean-after ((foreign-key foreign-key-length))
+        (check-error session
+                     (%olm:pickle-inbound-group-session (session session)
+                                                        foreign-key
+                                                        foreign-key-length
+                                                        p-buffer
+                                                        p-length))
+        (setf ret (cffi:foreign-string-to-lisp p-buffer))))))
 
 (defmethod from-pickle
     ((type (eql :inbound-group)) (pickle string) (passphrase string))
@@ -83,30 +84,31 @@ passphrase. If the passphrase doesn't match the one used to encrypt
             the session key was shared with us)"
   (let* ((max-pt nil)
          (res nil)
-         (ct-as-bytes (babel:string-to-octets cipher-text))
-         (ct-copy (copy-seq ct-as-bytes)))
-    (cffi:with-pointer-to-vector-data (ct-arr ct-as-bytes)
+         (ct-as-bytes (ironclad:ascii-string-to-byte-array cipher-text))
+         (ct-copy (copy-seq ct-as-bytes))
+         (pt-len 0))
+    (with-foreign-vector (ct-arr ct-as-bytes)
       (setf max-pt (%olm:group-decrypt-max-plaintext-length (session session)
                                                             ct-arr
                                                             (length ct-as-bytes)))
       ;;ct-buf will be destroyed by this ^
       (check-error session max-pt))
-    (cffi:with-pointer-to-vector-data (pt-buf
-                                       (make-array max-pt
-                                                   :element-type '(unsigned-byte 8)))
-      (cffi:with-pointer-to-vector-data (ct-buf ct-copy)
+    (with-foreign-vector (pt-buf (mbyte-array max-pt))
+      (with-foreign-vector (ct-buf ct-copy)
         (clean-after ((pt-buf max-pt))
           (let ((uint (cffi:foreign-alloc :uint32)))
-            (handler-case 
+            (handler-case
                 (check-error session
-                             (%olm:group-decrypt (session session)
-                                                 ct-buf (length ct-as-bytes)
-                                                 pt-buf max-pt
-                                                 uint))
+                             (setf pt-len
+                                   (%olm:group-decrypt (session session)
+                                                       ct-buf (length ct-as-bytes)
+                                                       pt-buf max-pt
+                                                       uint)))
               (olm-error (c)
                 (cffi:foreign-free uint)
                 (error c)))
-            (setf res (list (cffi:foreign-string-to-lisp pt-buf) uint))))))
+            (setf res (list (cffi:foreign-string-to-lisp pt-buf :count pt-len)
+                            (cffi:mem-aref uint :uint32 0)))))))
     (values (car res) (second res))))
 
 (defmethod id ((session inbound-group-session))
@@ -146,17 +148,18 @@ passphrase. If the passphrase doesn't match the one used to encrypt
           (check-error session ret))))
     res))
 
-
 (defmethod import-session ((type (eql :inbound)) session-key)
   "Create an InboundGroupSession from an exported session key.
 Creates an InboundGroupSession with an previously exported session key.
 Signals 'olm-invalid-base-64 if the session_key is not valid base64 or
  'olm-bad-session-key if the session_key is invalid"
-  (let ((session (gen-inbound-group-session))
-        (ret nil))
-    (cffi:with-foreign-string ((bk-buf bk-buf-len) session-key)
-      (clean-after ((bk-buf bk-buf-len))
-        (setf ret (%olm:import-inbound-group-session session bk-buf bk-buf-len))
+  (let* ((session (gen-inbound-group-session))
+         (sess-bytes (to-bytes session-key))
+         (sess-len (length sess-bytes))
+         (ret nil))
+    (with-foreign-vector (bk-buf sess-bytes)
+      (clean-after ((bk-buf sess-len))
+        (setf ret (%olm:import-inbound-group-session session bk-buf sess-len))
         (setf session (make-instance 'inbound-group-session :session session))
         (check-error session ret)))
     session))
@@ -176,9 +179,7 @@ Signals 'olm-invalid-base-64 if the session_key is not valid base64 or
   (let* ((session (gen-outbound-group-session))
          (len (%olm:init-outbound-group-session-random-length session))
          (ret nil))
-    (cffi:with-pointer-to-vector-data (buffer
-                                       (make-array len
-                                                   :element-type '(unsigned-byte 8)))
+    (cffi:with-foreign-string (buffer (make-string len))
       (setf ret (%olm:init-outbound-group-session session buffer len))
       (let ((new-session (make-instance 'outbound-group-session :session session)))
         (check-error new-session ret)
@@ -190,16 +191,19 @@ Signals 'olm-invalid-base-64 if the session_key is not valid base64 or
 Stores a group session as a base64 string. Encrypts the session using
 the supplied passphrase. Returns a byte object containing the base64
 encoded string of the pickled session."
-  (let* ((p-length (%olm:pickle-outbound-group-session-length (session session))))
+  (let* ((p-length (%olm:pickle-outbound-group-session-length (session session)))
+         (ret nil))
     (cffi:with-foreign-string ((foreign-key foreign-key-length) passphrase)
       (clean-after ((foreign-key foreign-key-length))
-        (cffi:with-foreign-pointer-as-string (p-buffer p-length)
+        (cffi:with-foreign-string (p-buffer (make-string p-length))
           (check-error session
                        (%olm:pickle-outbound-group-session (session session)
                                                            foreign-key
                                                            foreign-key-length
                                                            p-buffer
-                                                           p-length)))))))
+                                                           p-length))
+          (setf ret (cffi:foreign-string-to-lisp p-buffer)))))
+    ret))
 
 (defmethod from-pickle
     ((type (eql :outbound-group)) (pickle string) (passphrase string))
@@ -227,14 +231,12 @@ base64 couldn't be decoded then the condition signalled will be'invalid-base64."
 (defmethod encrypt ((session outbound-group-session) (plaintext string))
   "Encrypt a message. Returns the encrypted ciphertext."
   (let* ((res nil)
-         (pt-ar (babel:string-to-octets plaintext))
+         (pt-ar (to-bytes plaintext))
          (pt-len (length pt-ar))
          (max-pt (%olm:group-encrypt-message-length
                   (session session) pt-len)))
-    (cffi:with-pointer-to-vector-data (message-buffer
-                                       (make-array max-pt
-                                                   :element-type '(unsigned-byte 8)))
-      (cffi:with-pointer-to-vector-data (pt-buf pt-ar)
+    (cffi:with-foreign-string (message-buffer (make-string max-pt))
+      (with-foreign-vector (pt-buf pt-ar)
         (clean-after ((pt-buf pt-len))
           (check-error session
                        (%olm:group-encrypt (session session)

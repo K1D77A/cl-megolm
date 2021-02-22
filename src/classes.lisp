@@ -9,6 +9,9 @@
   (:documentation "Used to free the pointer associated with the object. 
 Super important to call this when done using an object that needs it."))
 
+(defmethod cleanup :before (object)
+  (clear object))
+
 (defclass account ()
   ((account
     :accessor account
@@ -94,14 +97,15 @@ Super important to call this when done using an object that needs it."))
 (defclass session ()
   ((session
     :accessor session
-    :initarg :session)
-   (session-key
-    :accessor session-key)))
+    :initarg :session)))
 
 (defmethod %check-error ((session session) to-check)
   (let ((er (%olm:session-last-error (session session))))
     (string->condition er)
     session))
+
+(defmethod clear ((session session))
+  (%olm:clear-session (session session)))
 
 (defmethod cleanup ((session session))
   (cffi:foreign-free (session session)))
@@ -112,6 +116,7 @@ Super important to call this when done using an object that needs it."))
 (defclass outbound-session (session)
   ())
 
+
 (defclass inbound-group-session (session)
   ())
 
@@ -119,6 +124,9 @@ Super important to call this when done using an object that needs it."))
   (let ((er (%olm:inbound-group-session-last-error (session inbound-group-session))))
     (string->condition er)
     inbound-group-session))
+
+(defmethod clear ((session inbound-group-session))
+  (%olm:clear-inbound-group-session (session session)))
 
 (defclass outbound-group-session (session)
   ())
@@ -128,6 +136,9 @@ Super important to call this when done using an object that needs it."))
              (session outbound-group-session))))
     (string->condition er)
     outbound-group-session))
+
+(defmethod clear ((session outbound-group-session))
+  (%olm:clear-outbound-group-session (session session)))
 
 (defclass %olm-message ()
   ((ciphertext

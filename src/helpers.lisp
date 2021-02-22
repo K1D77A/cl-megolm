@@ -17,6 +17,16 @@ call-next-method"
        (%check-error ,object ,res)
        ,res)))
 
+
+(declaim (inline mbyte-array))
+(defun mbyte-array (len)
+  (make-array len :element-type '(unsigned-byte 8)))
+
+(declaim (inline to-bytes))
+(defun to-bytes (string)
+  (check-type string string)
+  (babel:string-to-octets string))
+
 (defun plist-key-val (plist key)
   "Gets the value associated with KEY in PLIST."
   (let ((pos (position key plist)))
@@ -96,3 +106,22 @@ in the same order as the bindings so for example if bindings were the following:
         ((= n 1)
          t)
         (t (error "n is neither 0 or 1"))))
+
+(defmacro with-foreign-vector (binding &body body)
+  "binding should look like either ((buf buf-len) <bytes>) or (buf <bytes>)"
+  (if (listp (first binding))
+      (let ((vars (first binding))
+            (bytes (second binding)))
+        `(let ((,(second vars) (length ,bytes)))
+           (cffi:with-pointer-to-vector-data (,(first vars) ,bytes)
+             (locally ,@body))))
+      ;;possibility that this could cause errors.
+      `(cffi:with-pointer-to-vector-data (,(first binding) ,(second binding))
+         (locally ,@body))))
+
+
+
+
+
+
+

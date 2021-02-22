@@ -2,6 +2,8 @@
 
 (in-package #:cl-megolm-tests)
 
+(setf lisp-unit:*print-summary* t)
+
 (defmacro cleanup-after (object &body body)
   `(unwind-protect (progn ,@body)
      (cleanup ,object)))
@@ -34,9 +36,10 @@
        (:tag :session :group :inbound)
        (let* ((outbound (make-outbound-group-session))
               (inbound (make-inbound-group-session (session-key outbound))))
-         (cleanup-after outbound
-           (cleanup-after inbound
-             (handler-case
-                 (progn ,@body)
-               (olm-error ()
-                 (assert-true nil)))))))))
+         (declare (ignorable inbound outbound))
+         (unwind-protect (handler-case
+                             (progn ,@body)
+                           (olm-error ()
+                             (assert-true nil)))
+           (progn (cleanup-after outbound
+                    (cleanup-after inbound))))))))
