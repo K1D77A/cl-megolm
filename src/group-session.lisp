@@ -3,9 +3,9 @@
 ;;;;copy of ;;;https://gitlab.matrix.org/matrix-org/olm/-/blob/master/python/olm/group_session.py
 
 (defun gen-inbound-group-session ()
-  (let* ((size (%olm:inbound-group-session-size)))
-    (cffi:with-foreign-string (buf (make-string size))
-      (%olm:inbound-group-session buf))))
+  (let* ((size (%olm:inbound-group-session-size))
+         (buf (cffi:foreign-string-alloc (make-string size))))
+    (%olm:inbound-group-session buf)))
 
 (defun make-inbound-group-session (session-key)
   "Create a new inbound group session.
@@ -15,7 +15,7 @@ key is not valid base64 or 'olm-bad_session_key if the session key is
  invalid."
   (let ((session (gen-inbound-group-session))        
         (ret nil))
-    (cffi:with-foreign-string ((buffer sess-len) session-key)
+    (with-foreign-vector ((buffer sess-len) (to-bytes session-key))
       (clean-after ((buffer sess-len))
         (let ((new-session (make-instance 'inbound-group-session
                                           :session session)))
@@ -168,9 +168,9 @@ Signals 'olm-invalid-base-64 if the session_key is not valid base64 or
 
 ;;;outbound
 (defun gen-outbound-group-session ()
-  (let* ((size (%olm:outbound-group-session-size)))
-    (cffi:with-foreign-string (buf (random-string size))
-      (%olm:outbound-group-session buf))))
+  (let* ((size (%olm:outbound-group-session-size))
+         (buf (cffi:foreign-string-alloc (make-string size))))
+    (%olm:outbound-group-session buf)))
 
 (defun make-outbound-group-session ()
   "Create a new outbound group session.
@@ -179,7 +179,7 @@ Signals 'olm-invalid-base-64 if the session_key is not valid base64 or
   (let* ((session (gen-outbound-group-session))
          (len (%olm:init-outbound-group-session-random-length session))
          (ret nil))
-    (cffi:with-foreign-string (buffer (make-string len))
+    (cffi:with-foreign-string (buffer (random-string len))
       (setf ret (%olm:init-outbound-group-session session buffer len))
       (let ((new-session (make-instance 'outbound-group-session :session session)))
         (check-error new-session ret)

@@ -29,17 +29,28 @@
     (mark-keys-as-published account)
     (assert-false (second (one-time-keys account)))))
 
-;; (account-test valid-signature
-;;   (let* ((message "its a secret to everybody")
-;;          (sig (sign account message))
-;;          (signing-key (ed25519 account)))
-;;     (print sig)
-;;     (print signing-key)
-;;     (assert-true (ed25519-verify-p signing-key message sig))))
+(account-test valid-signature
+  (let* ((message "its a secret to everybody")
+         (sig (sign account message))
+         (signing-key (ed25519 account)))
+    (assert-true (ed25519-verify-p signing-key message sig))))
 
-;; (account-test invalid-signature
+(account-test invalid-signature
+  (let* ((message "its a secret to everybody")
+         (account2 (make-account))
+         (sig (sign account message))
+         (signing-key (ed25519 account2)))
+    (assert-nil (ed25519-verify-p signing-key message sig))
+    (cleanup account2)))
 
-;;(account-test signature-verification-twice
+(account-test signature-verification-twice
+  (let* ((message "its a secret to everybody")
+         (sig (sign account message))
+         (signing-key (ed25519 account)))
+    (assert-true (ed25519-verify-p signing-key message sig))
+    (assert-equal sig (sign account message))
+    (assert-true (ed25519-verify-p signing-key message sig))
+    (assert-equal sig (sign account message))))
 
 
 

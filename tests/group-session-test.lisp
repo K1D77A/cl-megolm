@@ -44,19 +44,17 @@
 (inbound-group-test first-index
   (assert-true (integerp (first-known-index inbound))))
 
-(inbound-group-test test-encrypt
-  (print "boof")
+(group-test test-encrypt
   (let* ((encrypt (encrypt outbound "test"))
          (decrypt (decrypt inbound encrypt)))
     (assert-equal "test" decrypt)))
 
-(inbound-group-test test-decrypt
-  (print "oof")
+(group-test test-decrypt
   (let* ((encrypt (encrypt outbound "test"))
          (decrypt (decrypt inbound encrypt)))
     (assert-equal "test" decrypt)))
 
-(inbound-group-test test-decrypt-twice
+(group-test test-decrypt-twice
   (let* ((encrypt (encrypt outbound "test"))
          (decrypt (decrypt inbound encrypt))
          (encrypt2 (encrypt outbound "test2")))
@@ -66,9 +64,19 @@
       (assert-equal "test2" dec)
       (assert-equal 1 index))))
 
-(inbound-group-test id
-  (print "oof")
+(group-test id
   (assert-equal (id inbound) (id outbound)))
+
+(outbound-group-test pickle-fail
+  (let ((pickle (pickle outbound "abc")))
+    (assert-error 'bad-account-key (from-pickle :outbound-group pickle ""))))
+
+(outbound-group-test clear
+  ;;two outbound are made in this case, its obvious that clearing works because
+  ;;otherwise all the others would fail
+  (let ((out (make-outbound-group-session)))
+    (assert-nil (cleanup out))))
+
 
 
 

@@ -43,7 +43,7 @@ signalled."
     `(prog1 (define-condition ,name ,supers ())
        (setf (gethash ,string *conditions*) ',name))))
 
-(def-trivial-condition olm-bad-session-key (olm-error))
+(def-trivial-condition bad-session-key (olm-error))
 (def-trivial-condition unknown-pickle-version (olm-error))
 (def-trivial-condition bad-signature (olm-error))
 (def-trivial-condition not-enough-random (olm-error))

@@ -168,3 +168,6 @@ Super important to call this when done using an object that needs it."))
 
 (defmethod cleanup ((utility utility))
   (cffi:foreign-free (utility utility)))
+
+(defmethod clear ((utility utility))
+  (%olm:clear-utility (utility utility)))

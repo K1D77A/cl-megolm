@@ -100,10 +100,10 @@ in the same order as the bindings so for example if bindings were the following:
                         ,foreign-key ,foreign-key-length
                         ,p-buffer ,p-length))))))))
 
-(defun to-bool (n)
-  (cond ((= n 0)
+(defun to-bool (n &optional (true 1) (false 0))
+  (cond ((= n false)
          nil)
-        ((= n 1)
+        ((= n true)
          t)
         (t (error "n is neither 0 or 1"))))
 

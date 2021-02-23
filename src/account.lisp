@@ -1,7 +1,6 @@
 (in-package #:cl-megolm)
 ;;;;copy of ;;;;https://gitlab.matrix.org/matrix-org/olm/-/blob/master/python/olm/account.py
 
-
 (defun gen-account ()
   (let* ((size (%olm:account-size))
          (buf (cffi:foreign-string-alloc (make-string size))))
@@ -81,7 +80,7 @@ then the condition signalled will be 'invalid-base64."
     (cffi:with-foreign-string (outbuf (make-string len))
       (check-error account
                    (%olm:account-identity-keys (account account) outbuf len))
-      (setf out (cffi:foreign-string-to-lisp outbuf)))
+      (setf out (cffi:foreign-string-to-lisp outbuf :count len)))
     (jojo:parse out)))
 
 (defmethod sign ((account account) (message string))
@@ -92,16 +91,15 @@ then the condition signalled will be 'invalid-base64."
         signals olm-account-error on failure."
   (let ((len (%olm:account-signature-length (account account)))
         (res nil))
-    ;;(cffi:*default-foreign-encoding* :ascii))
-    (cffi:with-foreign-strings (((foreign-m foreign-m-length) message)
-                                (output (make-string len)))
-      (clean-after ((foreign-m foreign-m-length))
-        (check-error account
-                     (%olm:account-sign (account account)
-                                        foreign-m foreign-m-length
-                                        output len))
-        (setf res (cffi:foreign-string-to-lisp output))))
-    res))
+    (with-foreign-vector ((foreign-m foreign-m-length) (to-bytes message))
+      (cffi:with-foreign-string (output (make-string len))
+        (clean-after ((foreign-m foreign-m-length))
+          (check-error account
+                       (%olm:account-sign (account account)
+                                          foreign-m foreign-m-length
+                                          output len))
+          (setf res (cffi:foreign-string-to-lisp output :count len))))
+      res)))
 
 (defmethod max-one-time-keys ((account account))
   "The maximum number of one-time keys the account can store."
