@@ -77,7 +77,7 @@ then the condition signalled will be 'invalid-base64."
   "Public part of the identity keys of the account."
   (let ((len (%olm:account-identity-keys-length (account account)))
         (out nil))
-    (cffi:with-foreign-string (outbuf (make-string len))
+    (cffi:with-foreign-string (outbuf (make-string len) :encoding :ascii)
       (check-error account
                    (%olm:account-identity-keys (account account) outbuf len))
       (setf out (cffi:foreign-string-to-lisp outbuf :count len)))
@@ -119,7 +119,8 @@ then the condition signalled will be 'invalid-base64."
         Signals olm-account-error on error."
   (let ((len (%olm:account-generate-one-time-keys-random-length
               (account account) n)))
-    (cffi:with-foreign-string (ran (random-string len))
+    (print len)
+    (with-foreign-vector (ran (ironclad:random-data len))
       (check-error account
                    (%olm:account-generate-one-time-keys (account account)
                                                         n ran len)))))
@@ -127,10 +128,11 @@ then the condition signalled will be 'invalid-base64."
 (defmethod one-time-keys ((account account))
   "The public part of the one-time keys for this account."
   (let ((len (%olm:account-one-time-keys-length (account account))))
+    (print len)
     (cffi:with-foreign-string (keys (make-string len))
       (check-error account
                    (%olm:account-one-time-keys (account account) keys len))
-      (jojo:parse (cffi:foreign-string-to-lisp keys)))))
+      (jojo:parse (cffi:foreign-string-to-lisp keys :count len)))))
 
 (defmethod remove-one-time-keys ((account account) (session session))
   "Remove used one-time keys.

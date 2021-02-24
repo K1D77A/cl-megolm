@@ -8,16 +8,13 @@
   (make-instance 'pk-message :ciphertext ciphertext :mac mac
                              :ephemeral ephemeral-key))
 
-(defun clear-pk-encryption (pk-struct)
-  (%olm:clear-pk-encryption pk-struct))
-
 (defun make-pk-encryption (recipient-key)
   "Create a new PK encryption object. Creates a pointer that has to be freed later."
   (let* ((buf (cffi:foreign-string-alloc (make-string (%olm:pk-encryption-size))))
          ;;got remember that buf has to be freed when done with the object
          ;;these are the same pointer, idk why the python devs have done this.
          (pk-enc (%olm:pk-encryption buf)))
-    (cffi:with-foreign-string ((byte-key byte-key-len) recipient-key)
+    (with-foreign-vector ((byte-key byte-key-len) (to-bytes recipient-key))
       (clean-after ((byte-key byte-key-len))
         (%olm:pk-encryption-set-recipient-key pk-enc byte-key byte-key-len)))
     (make-instance 'pk-encryption :pk-encrypt pk-enc)))
@@ -41,32 +38,30 @@
           (eph-key-size (%olm:pk-key-length))
           (cipher-len 0)
           (res nil))
-      (cffi:with-foreign-strings (((byte-plaintext byte-plaintext-len) plaintext)
-                                  (random-buffer (random-string r-len)))
-        (clean-after ((byte-plaintext byte-plaintext-len))
-          (setf cipher-len (%olm:pk-ciphertext-length pk-encrypt byte-plaintext-len))
-          (multiple-value-bind (nc nm ne)
-              (with-foreign-strings-as-lisp ((cipher-text (make-string cipher-len))
-                                             (mac (make-string mac-len))
-                                             (eph (make-string eph-key-size)))
-                (check-error pk
-                             (%olm:pk-encrypt pk-encrypt
-                                              byte-plaintext byte-plaintext-len
-                                              cipher-text cipher-len mac
-                                              mac-len eph eph-key-size
-                                              random-buffer r-len)))
-            (setf res (make-instance 'pk-message :ciphertext nc
-                                                 :mac nm :ephemeral ne)))))
+      (cffi:with-foreign-string ((plaintext plaintext-len) plaintext)
+        (cffi:with-foreign-string (random-buffer (random-string r-len))
+          (clean-after ((plaintext plaintext-len))
+            (setf cipher-len (%olm:pk-ciphertext-length
+                              pk-encrypt plaintext-len))
+            (multiple-value-bind (nc nm ne)
+                (with-foreign-strings-as-lisp ((cipher-text (make-string cipher-len))
+                                               (mac (make-string mac-len))
+                                               (eph (make-string eph-key-size)))
+                  (check-error pk
+                               (%olm:pk-encrypt pk-encrypt
+                                                plaintext plaintext-len
+                                                cipher-text cipher-len mac
+                                                mac-len eph eph-key-size
+                                                random-buffer r-len)))
+              (setf res (make-instance 'pk-message :ciphertext nc
+                                                   :mac nm :ephemeral ne))))))
       res)))
 
-(defun clear-pk-decryption (pk-struct)
-  (%olm:clear-pk-decryption pk-struct))
 
 (defun gen-pk-decryption ()
   "Generates a new pk-decryption object. Creates a pointer that has to be freed 
 later"
-  (let ((buf
-          (cffi:foreign-string-alloc (make-string (%olm:pk-decryption-size)))))
+  (let ((buf (cffi:foreign-string-alloc (make-string (%olm:pk-decryption-size)))))
     (make-instance 'pk-decryption :public-key nil                   
                                   :pk-decrypt (%olm:pk-decryption buf))))
 
@@ -78,7 +73,6 @@ later"
          (random-len (%olm:pk-private-key-length)))
     (cffi:with-foreign-strings  ((random-buf (random-string random-len))
                                  (key-buffer (make-string key-len)))
-
       (let ((ret (%olm:pk-key-from-private (pk-decrypt pk)
                                            key-buffer key-len
                                            random-buf random-len)))
@@ -134,27 +128,22 @@ session then the error message for the condition 'bad-account-key is signalled.
                    (ciphertext ciphertext))
       pk-message
     (let ((res nil))
-      (cffi:with-foreign-strings ((ephemeral-key  ephemeral)
-                                  (mac-buf mac)
-                                  (ciphertext-buf  ciphertext))
-        (let* ((max-pt-len (%olm:pk-max-plaintext-length (pk-decrypt pk)
-                                                         (length ciphertext)))
-               (plaintext-buffer
-                 (cffi:foreign-string-alloc (make-string max-pt-len))))
-          (unwind-protect
-               (clean-after ((plaintext-buffer max-pt-len))
-                 (check-error pk
-                              (%olm:pk-decrypt (pk-decrypt pk)
-                                               ephemeral-key (length ephemeral)
-                                               mac-buf (length mac)
-                                               ciphertext-buf (length ciphertext)
-                                               plaintext-buffer max-pt-len))
-                 (setf res (cffi:foreign-string-to-lisp plaintext-buffer)))
-            (cffi:foreign-string-free plaintext-buffer))))
+      (with-foreign-vector (ephemeral-key (to-bytes ephemeral))
+        (with-foreign-vector (mac-buf (to-bytes mac))
+          (with-foreign-vector (ciphertext-buf (to-bytes ciphertext))
+            (let* ((max-pt-len (%olm:pk-max-plaintext-length (pk-decrypt pk)
+                                                             (length ciphertext))))
+              (cffi:with-foreign-string (plaintext-buffer (make-string max-pt-len))
+                (clean-after ((plaintext-buffer max-pt-len))
+                  (check-error pk 
+                               (%olm:pk-decrypt (pk-decrypt pk)
+                                                ephemeral-key (length ephemeral)
+                                                mac-buf (length mac)
+                                                ciphertext-buf (length ciphertext)
+                                                plaintext-buffer max-pt-len))
+                  (setf res (cffi:foreign-string-to-lisp plaintext-buffer))))))))
       res)))
 
-(defun clear-pk-signing (pk-struct)
-  (%olm:clear-pk-signing pk-struct))
 
 (defun make-pk-signing ()
   "Creates a new instance of pk-signing from a randomly generated seed."
@@ -178,13 +167,13 @@ session then the error message for the condition 'bad-account-key is signalled.
 
 (defmethod sign ((pk pk-signing) (message string))
   "Sign a message."
-  (cffi:with-foreign-strings (((message-buf message-buf-len) message)
-                              ((signature-buf signature-buf-len)
-                               (make-string (%olm:pk-signature-length))))
-    (check-error pk (%olm:pk-sign (pk-sign pk)
-                                  message-buf message-buf-len
-                                  signature-buf signature-buf-len))
-    (cffi:foreign-string-to-lisp signature-buf)))
+  (with-foreign-vector ((message-buf message-buf-len) (to-bytes message))
+    (cffi:with-foreign-string ((signature-buf signature-buf-len)
+                               (make-string (%olm:pk-signature-length)))
+      (check-error pk (%olm:pk-sign (pk-sign pk)
+                                    message-buf message-buf-len
+                                    signature-buf signature-buf-len))
+      (cffi:foreign-string-to-lisp signature-buf))))
     
 
 

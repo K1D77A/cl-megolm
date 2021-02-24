@@ -44,6 +44,7 @@ signalled."
        (setf (gethash ,string *conditions*) ',name))))
 
 (def-trivial-condition bad-session-key (olm-error))
+
 (def-trivial-condition unknown-pickle-version (olm-error))
 (def-trivial-condition bad-signature (olm-error))
 (def-trivial-condition not-enough-random (olm-error))
@@ -56,6 +57,7 @@ signalled."
 (def-trivial-condition bad-message-format (olm-error))
 (def-trivial-condition bad-message-mac (olm-error))
 (def-trivial-condition unknown-message-index (olm-error))
+(def-trivial-condition olm-sas-their-key-not-set (olm-error))
 (def-trivial-condition invalid-base64 (olm-error))
 (def-trivial-condition olm-invalid-base64 (olm-error))
 (def-trivial-condition olm-bad-message-version (olm-error))

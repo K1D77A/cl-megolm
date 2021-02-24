@@ -52,6 +52,9 @@ Super important to call this when done using an object that needs it."))
 (defmethod cleanup ((pk-encryption pk-encryption))
   (cffi:foreign-free (pk-encrypt pk-encryption)))
 
+(defmethod clear ((pk-encryption pk-encryption))
+  (%olm:clear-pk-encryption (pk-encrypt pk-encryption)))
+
 (defclass pk-decryption ()
   ((pk-decrypt
     :accessor pk-decrypt
@@ -67,6 +70,9 @@ Super important to call this when done using an object that needs it."))
 
 (defmethod cleanup ((pk-decryption pk-decryption))
   (cffi:foreign-free (pk-decrypt pk-decryption)))
+
+(defmethod clear ((pk-decryption pk-decryption))
+  (%olm:clear-pk-decryption (pk-decrypt pk-decryption)))
 
 (defclass pk-signing ()
   ((pk-sign
@@ -84,6 +90,9 @@ Super important to call this when done using an object that needs it."))
 (defmethod cleanup ((pk-signing pk-signing))
   (cffi:foreign-free (pk-sign pk-signing)))
 
+(defmethod clear ((pk-signing pk-signing))
+  (%olm:clear-pk-signing (pk-sign pk-signing)))
+
 (defclass sas ()
   ((sas
     :accessor sas
@@ -93,6 +102,12 @@ Super important to call this when done using an object that needs it."))
   (let ((er (%olm:sas-last-error (sas sas))))
     (string->condition er)
     sas))
+
+(defmethod cleanup ((sas sas))
+  (cffi:foreign-free (sas sas)))
+
+(defmethod clear ((sas sas))
+  (%olm:clear-sas (sas sas)))
 
 (defclass session ()
   ((session
@@ -115,7 +130,6 @@ Super important to call this when done using an object that needs it."))
 
 (defclass outbound-session (session)
   ())
-
 
 (defclass inbound-group-session (session)
   ())

@@ -5,24 +5,21 @@
 (defun make-sas (&optional other-user-pubkey)
   (let* ((buf (cffi:foreign-string-alloc (make-string  (%olm:sas-size))))
          (sas (%olm:sas buf))
-         (random-length (%olm:create-sas-random-length sas))
-         (random-string (random-string random-length)))
+         (random-length (%olm:create-sas-random-length sas)))
     (let ((obj (make-instance 'sas :sas sas)))
-      (cffi:with-foreign-string (random random-string)
-        (check-error obj (%olm:create-sas (sas obj) random random-length)))
+      (cffi:with-foreign-string (random (random-string random-length))      
+        (create-sas obj random random-length))
       (when other-user-pubkey
-        (set-pubkey sas other-user-pubkey))
+        (check-type other-user-pubkey string)
+        (set-their-public-key obj other-user-pubkey))
       obj)))
 
-(defmethod set-pubkey ((sas sas) (pubkey string))
-  "Set the public key of the other user.
+(defmethod create-sas ((sas sas) buf len)
+  (check-error sas (%olm:create-sas (sas sas) buf len)))
 
-        This sets the public key of the other user, it needs to be set before
-        bytes can be generated for the authentication string and a MAC can be
-        calculated."
-  (cffi:with-foreign-string ((key keylen) pubkey)
-    (check-error sas
-                 (%olm:sas-set-their-key (sas sas) key keylen))))
+(defmethod create-sas ((sas sas) (buf array) len)
+  (with-foreign-vector (buf buf)
+    (check-error sas (%olm:create-sas (sas sas) buf len))))
 
 (defmethod pubkey ((sas sas))
   "Get the public key for the SAS object.
@@ -30,8 +27,10 @@
         This returns the public key of the SAS object that can then be shared
         with another user to perform the authentication process."
   (let ((len (%olm:sas-pubkey-length (sas sas))))
-    (cffi:with-foreign-pointer-as-string (pubkey len)
-      (check-error sas (%olm:sas-get-pubkey (sas sas) pubkey len)))))
+    (cffi:with-foreign-string ((pubkey-buffer pubkey-len) (make-string len))
+      (check-error sas (%olm:sas-get-pubkey (sas sas)
+                                            pubkey-buffer pubkey-len))
+      (cffi:foreign-string-to-lisp pubkey-buffer :count len))))
 
 (defmethod other-key-set-p ((sas sas))
   "Check if the other user's pubkey has been set."
@@ -43,30 +42,37 @@
         This sets the public key of the other user, it needs to be set before
         bytes can be generated for the authentication string and a MAC can be
         calculated."
-  (cffi:with-foreign-string ((byte-key byte-key-len) pubkey)
-    (check-error sas (%olm:sas-set-their-key (sas sas) byte-key byte-key-len))))
+  (with-foreign-vector ((byte-key byte-key-len) (to-bytes pubkey))
+    (check-error sas (%olm:sas-set-their-key (sas sas)
+                                             byte-key byte-key-len))))
 
 (defmethod generate-bytes ((sas sas) (extra-info string) (length integer))
   "Generate bytes to use for the short authentication string."
-  (when (< length 1)
-    (error "Length needs to be greater than 1"))
-  (cffi:with-foreign-pointer-as-string (outbuf length)
-    (cffi:with-foreign-string ((byte-extra byte-extra-len) extra-info)
-      (check-error sas (%olm:sas-generate-bytes
-                        (sas sas)
-                        byte-extra byte-extra-len
-                        outbuf length)))))
+  (when (<= length 5)
+    (error "Length needs to be greater than or equal to 5"))
+  (cffi:with-foreign-string (outbuf (make-string length))
+    (with-foreign-vector ((byte-extra byte-extra-len) (to-bytes extra-info))
+      (check-error sas
+                   (%olm:sas-generate-bytes (sas sas)
+                                            byte-extra byte-extra-len
+                                            outbuf length))
+      (let ((ret (make-array length :element-type '(unsigned-byte 8))))
+        (loop :for i :from 0 :below length
+              :do (setf (aref ret i)
+                        (cffi:mem-aref outbuf :uint8 i)))
+        ret))))
+
 
 (defmethod calculate-mac ((sas sas) (message string) (extra-info string))
   "Generate a message authentication code based on the shared secret."
   (cffi:with-foreign-pointer-as-string ((mac-buf mac-buf-len)
                                         (%olm:sas-mac-length (sas sas)))
-    (cffi:with-foreign-strings (((byte-extra byte-extra-len) extra-info)
-                                ((byte-message byte-message-len) message))
-      (check-error sas (%olm:sas-calculate-mac (sas sas)
-                                               byte-message byte-message-len
-                                               byte-extra byte-extra-len
-                                               mac-buf mac-buf-len)))))
+    (with-foreign-vector ((byte-extra byte-extra-len) (to-bytes extra-info))
+      (with-foreign-vector ((byte-message byte-message-len) (to-bytes message))
+        (check-error sas (%olm:sas-calculate-mac (sas sas)
+                                                 byte-message byte-message-len
+                                                 byte-extra byte-extra-len
+                                                 mac-buf mac-buf-len))))))
 
 (defmethod calculate-mac-long-kdf ((sas sas) (message string) (extra-info string))
   "Generate a message authentication code based on the shared secret.
@@ -75,12 +81,13 @@
         non-tagged Olm version is required."
   (cffi:with-foreign-pointer-as-string ((mac-buf mac-buf-len)
                                         (%olm:sas-mac-length (sas sas)))
-    (cffi:with-foreign-strings (((byte-extra byte-extra-len) extra-info)
-                                ((byte-message byte-message-len) message))
-      (check-error sas (%olm:sas-calculate-mac-long-kdf (sas sas)
-                                                        byte-message byte-message-len
-                                                        byte-extra byte-extra-len
-                                                        mac-buf mac-buf-len)))))
+    (with-foreign-vector ((byte-extra byte-extra-len) (to-bytes extra-info))
+      (with-foreign-vector ((byte-message byte-message-len) (to-bytes message))
+        (check-error sas
+                     (%olm:sas-calculate-mac-long-kdf (sas sas)
+                                                      byte-message byte-message-len
+                                                      byte-extra byte-extra-len
+                                                      mac-buf mac-buf-len))))))
 
 
 

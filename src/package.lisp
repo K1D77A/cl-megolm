@@ -83,13 +83,19 @@
            #:clear
            #:curve
            #:ed25519
+           #:public-key
+           #:ephemeral
+           #:mac
+           #:ciphertext
+           #:create-sas
            #:generate-one-time-keys
            #:one-time-keys
+           #:olm-sas-their-key-not-set
            #:remove-one-time-keys))
-           
-           
-           
-           
-           
-           
-           
+
+
+
+
+
+
+
