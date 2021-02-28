@@ -119,20 +119,19 @@ then the condition signalled will be 'invalid-base64."
         Signals olm-account-error on error."
   (let ((len (%olm:account-generate-one-time-keys-random-length
               (account account) n)))
-    (print len)
-    (with-foreign-vector (ran (ironclad:random-data len))
+    (with-foreign-vector ((ran ran-len) (ironclad:random-data len))
       (check-error account
                    (%olm:account-generate-one-time-keys (account account)
-                                                        n ran len)))))
+                                                        n ran ran-len)))))
 
 (defmethod one-time-keys ((account account))
   "The public part of the one-time keys for this account."
   (let ((len (%olm:account-one-time-keys-length (account account))))
-    (print len)
-    (cffi:with-foreign-string (keys (make-string len))
+    (cffi:with-foreign-string ((keys keys-len) (make-string len))
       (check-error account
-                   (%olm:account-one-time-keys (account account) keys len))
-      (jojo:parse (cffi:foreign-string-to-lisp keys :count len)))))
+                   (%olm:account-one-time-keys (account account) keys keys-len))
+      (jojo:parse (cffi:foreign-string-to-lisp keys :count keys-len
+                                                    :encoding :ascii)))))
 
 (defmethod remove-one-time-keys ((account account) (session session))
   "Remove used one-time keys.

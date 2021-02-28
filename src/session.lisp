@@ -19,11 +19,15 @@
 
 (defun make-olm-pre-key-message (ciphertext)
   "Create a make Olm prekey message with the supplied ciphertext"
-  (%make-olm-message ciphertext %olm:*message-type-pre-key*))
+  (if (zerop (length ciphertext))
+      (error "Ciphertext can't be empty")
+      (%make-olm-message ciphertext %olm:*message-type-pre-key*)))
 
 (defun make-olm-message (ciphertext)
   "Create a new Olm message with the supplied ciphertext"
-  (%make-olm-message ciphertext %olm:*message-type-message*))
+  (if (zerop (length ciphertext))
+      (error "Ciphertext can't be empty")
+      (%make-olm-message ciphertext %olm:*message-type-message*)))
 
 (defmethod clear-session ((session session))
   (%olm:clear-session (session session)))
@@ -82,18 +86,23 @@
     (let ((ran-len (%olm:encrypt-random-length (session session))))
       (setf message-type (%olm:encrypt-message-type (session session)))
       (check-error session message-type)
-      (with-foreign-vector ((plain-buf plain-length) (to-bytes plaintext))
+      (with-foreign-vector ((plain-buf plain-length) (to-bytes plaintext :ascii))
         (clean-after ((plain-buf plain-length))
-          (with-foreign-vector  ((cipher-buf cipher-buf-len)
-                                 (make-string (%olm:encrypt-message-length
-                                               (session session)
-                                               plain-length)))
-            (with-foreign-vector (random-buf (random-string ran-len))
-              (check-error session (%olm:encrypt (session session)
-                                                 plain-buf plain-length
-                                                 random-buf ran-len
-                                                 cipher-buf cipher-buf-len))
-              (setf res (cffi:foreign-string-to-lisp cipher-buf)))))))
+          (cffi:with-foreign-string ((cipher-buf cipher-buf-len)
+                                     (make-string (%olm:encrypt-message-length
+                                                   (session session)
+                                                   plain-length)))
+            (with-foreign-vector (random-buf (ironclad:random-data ran-len))
+              (let ((len (%olm:encrypt (session session)
+                                       plain-buf plain-length
+                                       random-buf ran-len
+                                       cipher-buf cipher-buf-len)))
+                (check-error session len)
+                (setf res (cffi:foreign-string-to-lisp cipher-buf
+                                                       :count len
+                                                       ))))))))
+
+    (print res)
     (%make-olm-message res message-type)))
 
 (defmethod decrypt ((session session) (message %olm-message))
@@ -104,24 +113,24 @@ will be 'bad-message-version. if the message couldn't be decoded then
 the condition signalled will be 'bad-message-format. if the mac on the
 message was invalid then the condition will be 'bad-message-mac
 "
-  (let ((res nil))
-    (with-foreign-vector ((cipher-buf cipher-buf-len)
-                          (to-bytes (ciphertext message)))
-      (with-foreign-vector ((cipher-buf2 cipher-buf-len2)
-                            (to-bytes (ciphertext message)))
+  (let* ((res nil)
+         (ct (to-bytes (ciphertext message) :ascii))
+         (message-copy (copy-seq ct)))
+    (with-foreign-vector ((cipher-buf cipher-buf-len) ct)
+      (with-foreign-vector ((cipher-buf2 cipher-buf-len2) message-copy)
         (let ((max-pt-len (%olm:decrypt-max-plaintext-length
                            (session session) (message-type message)
-                           cipher-buf cipher-buf-len)))
+                           cipher-buf cipher-buf-len)));;destroyed
           (check-error session max-pt-len)
-          (with-foreign-vector (plain-buf (make-string max-pt-len))
+          (cffi:with-foreign-string (plain-buf (make-string max-pt-len))
             (clean-after ((plain-buf max-pt-len))
-              (check-error session
-                           (%olm:decrypt (session session)
-                                         (message-type message)
-                                         cipher-buf2 cipher-buf-len2
-                                         plain-buf max-pt-len))
-              (setf res (cffi:foreign-string-to-lisp plain-buf
-                                                     :count max-pt-len)))))))
+              (let ((len (%olm:decrypt (session session)
+                                       (message-type message)
+                                       cipher-buf2 cipher-buf-len2
+                                       plain-buf max-pt-len)))
+                (check-error session len)
+                (setf res (cffi:foreign-string-to-lisp plain-buf
+                                                       :count len))))))))
     res))
 
 (defmethod id ((session session))
@@ -143,11 +152,21 @@ condition signalled will be 'invalid-base64. if the message was for an
 unsupported protocol version then the condition signalled will be
 'bad-message-version. if the message couldn't be decoded then then the
 condition signalled will be * 'bad-message-format."
-  (cffi:with-foreign-strings (((id-key-buf id-key-buf-len) id-key)
-                              ((message-buf message-buf-len) (ciphertext message)))
-    (let ((res (%olm:matches-inbound-session-from (session session)
-                                                  id-key-buf id-key-buf-len
-                                                  message-buf message-buf-len)))
+  (with-foreign-vector ((id-key-buf id-key-buf-len) (to-bytes id-key))
+    (with-foreign-vector ((message-buf message-buf-len) (to-bytes
+                                                         (ciphertext message)))
+      (let ((res (%olm:matches-inbound-session-from (session session)
+                                                    id-key-buf id-key-buf-len
+                                                    message-buf message-buf-len)))
+        (check-error session res)
+        (to-bool res)))))
+
+(defmethod matchesp ((session session) (message olm-message-pre-key) id-key)
+  ""
+  (with-foreign-vector ((message-buf message-buf-len) (to-bytes
+                                                       (ciphertext message)))
+    (let ((res (%olm:matches-inbound-session (session session)
+                                             message-buf message-buf-len)))
       (check-error session res)
       (to-bool res))))
 
@@ -158,8 +177,6 @@ condition signalled will be * 'bad-message-format."
                                              message-buf message-buf-len)))
       (check-error session res)
       (to-bool res))))
-
-
 
 
 (defmethod make-inbound-session ((account account) (message %olm-message)
@@ -175,7 +192,7 @@ condition signalled will be * 'bad-message-format."
         bad-message-format. if the message refers to an unknown one-time
         key then the condition signalled will be bad-message-key-id.
 "
-  (cffi:with-foreign-string ((id-key-buf id-key-buf-len) id-key)
+  (with-foreign-vector ((id-key-buf id-key-buf-len) (to-bytes id-key))
     (with-foreign-vector ((message-buf message-buf-len)
                           (to-bytes (ciphertext message)))
       (let ((inbound-session (make-instance 'inbound-session
@@ -189,8 +206,8 @@ condition signalled will be * 'bad-message-format."
 
 (defmethod make-inbound-session ((account account) (message %olm-message) id-key)
   ""
-  (cffi:with-foreign-string ((message-buf message-buf-len)
-                             (ciphertext message) :encoding :ascii)
+  (with-foreign-vector  ((message-buf message-buf-len)
+                         (to-bytes (ciphertext message)))
     (let ((inbound-session (make-instance 'inbound-session
                                           :session (session (make-session)))))
       (check-error inbound-session
@@ -204,13 +221,12 @@ condition signalled will be * 'bad-message-format."
                                   (id-key string))
   (let ((outbound-session (make-instance 'outbound-session
                                          :session (session (make-session)))))
-    (with-foreign-vector ((id-key-buf id-key-buf-len) id-key)
-      (with-foreign-vector ((otk-buf otk-buf-len) one-time-key)
+    (with-foreign-vector ((id-key-buf id-key-buf-len) (to-bytes id-key))
+      (with-foreign-vector ((otk-buf otk-buf-len) (to-bytes one-time-key))
         (with-foreign-vector ((random-buf random-buf-len)
-                              (to-bytes
-                               (random-string  
-                                (%olm:create-outbound-session-random-length
-                                 (session outbound-session)))))
+                              (ironclad:random-data  
+                               (%olm:create-outbound-session-random-length
+                                (session outbound-session))))
           (check-error outbound-session
                        (%olm:create-outbound-session (session outbound-session)
                                                      (account account)

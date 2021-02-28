@@ -23,18 +23,18 @@ call-next-method"
   (make-array len :element-type '(unsigned-byte 8)))
 
 (declaim (inline to-bytes))
-(defun to-bytes (seq)
+(defun to-bytes (seq &optional (encoding cffi:*default-foreign-encoding*))
   (check-type seq (or array string))
   (if (stringp seq)
-      (babel:string-to-octets seq)
+      (babel:string-to-octets seq :encoding encoding)
       seq))
 
-  (defun plist-key-val (plist key)
-    "Gets the value associated with KEY in PLIST."
-    (let ((pos (position key plist)))
-      (if (integerp pos)
-          (nth (1+ pos) plist);;slow but who cares
-          nil)))
+(defun plist-key-val (plist key)
+  "Gets the value associated with KEY in PLIST."
+  (let ((pos (position key plist)))
+    (if (integerp pos)
+        (nth (1+ pos) plist);;slow but who cares
+        nil)))
 
 (defmacro pkv (plist key)
   `(plist-key-val ,plist ,key))

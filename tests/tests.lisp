@@ -111,22 +111,23 @@
            ;;sessions they generate, they can be automatically deleted.
            (declare (ignorable alice bob))
            (flet ((gen-session ()
-                    (let ((a1 (make-account))
-                          (a2 (make-account)))
+                    (let ((a1 (make-account));;alice
+                          (a2 (make-account)));;bob
                       (push a1 ,to-clean)
                       (push a2 ,to-clean)
                       (generate-one-time-keys a2 1)
-                      (let ((id (curve a2))
-                            (one-time (second
-                                       (second
-                                        (one-time-keys a2)))))
-                        (let ((sesh (make-outbound-session a1 one-time id)))
-                          (push sesh ,to-clean)
-                          (values a1 a2 sesh))))))
-             (unwind-protect;; (handler-case
-                  (progn ,@body)
-               ;;(olm-error ()
-               ;;(assert-true nil)))
+                      (let* ((id (curve a2))
+                             (one-time (second
+                                        (second
+                                         (one-time-keys a2))))
+                             (sesh (make-outbound-session a1 one-time id)))
+                        (push sesh ,to-clean)
+                        (values a1 a2 sesh)))))
+             (unwind-protect
+                  (handler-case
+                      (progn ,@body)
+                    (olm-error (c)
+                      (print c)))
                (progn (cleanup alice)
                       (cleanup bob)
                       (mapc #'cleanup ,to-clean)))))))))
