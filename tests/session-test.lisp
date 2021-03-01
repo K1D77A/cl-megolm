@@ -38,7 +38,7 @@
 (session-test empty-message
   (mvb (alice bob session)
       (gen-session)
-    (assert-error 'simple-error 
+    (assert-error 'empty-ciphertext
                   (decrypt session (make-olm-pre-key-message "")))))
 
 (session-test inbound-with-id
@@ -57,14 +57,16 @@
     (let* ((plaintext "diddly doodly")
            (message (encrypt session plaintext));;session is outbound with alice
            (bob-session (make-inbound-session bob message (curve alice))))
-      (remove-one-time-keys bob bob-session)
-      (assert-true (string= plaintext (decrypt bob-session message)))
-      (let* ((bob-pt "doodly diddly")
-             (bob-encrypted (encrypt bob-session bob-pt)))
-        (assert-true (eql (type-of bob-encrypted) 'olm-message))
-        (unwind-protect 
-             (assert-true (string= bob-pt (decrypt session bob-encrypted)))
-          (cleanup bob-session))))))
+      (unwind-protect
+           (progn 
+             (remove-one-time-keys bob bob-session)
+             (assert-true (string= plaintext (decrypt bob-session message)))
+             (let* ((bob-pt "doodly diddly")
+                    (bob-encrypted (encrypt bob-session bob-pt)))
+               (assert-true (eql (type-of bob-encrypted) 'olm-message))
+               
+               (assert-true (string= bob-pt (decrypt session bob-encrypted)))))
+        (cleanup bob-session)))))
 
 (session-test matches
   (mvb (alice bob session)
@@ -72,11 +74,39 @@
     (let* ((plaintext "diddly doodly")
            (message (encrypt session plaintext));;session is outbound with alice
            (bob-session (make-inbound-session bob message (curve alice))))
-      (assert-true (string= plaintext (decrypt bob-session message)))
-      (unwind-protect 
-           (let* ((second (encrypt session "doodly diddly")))
-             (assert-true (matchesp bob-session second nil))
-             (assert-true (matchesp bob-session second (curve alice))))
+      (unwind-protect
+           (progn 
+             (assert-true (string= plaintext (decrypt bob-session message)))
+             (let* ((second (encrypt session "doodly diddly")))
+               (assert-true (matchesp bob-session second nil))
+               (assert-true (matchesp bob-session second (curve alice)))))
         (cleanup bob-session)))))
 
+(session-test invalid
+  (mvb (alice bob session)
+      (gen-session)
+    (let ((message (make-olm-message "X")))
+      (assert-error 'invalid-message-type
+                    (matchesp session message nil))
+      (setf message (make-olm-pre-key-message "X"))
+      (setf (ciphertext message) "")
+      (assert-error 'empty-ciphertext (matchesp session message nil))
+      (assert-error 'empty-ciphertext (make-inbound-session bob message nil))
+      (assert-error 'empty-one-time-key (make-outbound-session alice "" "x"))
+      (assert-error 'empty-id-key (make-outbound-session alice "x" "")))))
 
+(session-test doesnt-match
+  (mvb (alice bob session)
+      (gen-session)
+    (let* ((plaintext "oooga booga")
+           (message (encrypt session plaintext))
+           (alice-id (curve alice))
+           (bob-session (make-inbound-session bob message alice-id)))
+      (unwind-protect
+           (let ((new-session (make-session)))
+             (unwind-protect 
+                  (let ((new-message (encrypt new-session plaintext)))
+                    (print "doof")
+                    (assert-false (matchesp bob-session new-message nil)))
+               (cleanup new-session)))
+        (cleanup bob-session)))))

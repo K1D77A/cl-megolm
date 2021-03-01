@@ -65,29 +65,40 @@
 
 (defmethod calculate-mac ((sas sas) (message string) (extra-info string))
   "Generate a message authentication code based on the shared secret."
-  (cffi:with-foreign-pointer-as-string ((mac-buf mac-buf-len)
-                                        (%olm:sas-mac-length (sas sas)))
-    (with-foreign-vector ((byte-extra byte-extra-len) (to-bytes extra-info))
-      (with-foreign-vector ((byte-message byte-message-len) (to-bytes message))
-        (check-error sas (%olm:sas-calculate-mac (sas sas)
-                                                 byte-message byte-message-len
-                                                 byte-extra byte-extra-len
-                                                 mac-buf mac-buf-len))))))
+  (let ((res ()))
+    (cffi:with-foreign-string ((mac-buf mac-buf-len)
+                               (make-string (%olm:sas-mac-length (sas sas))))
+      (with-foreign-vector ((byte-extra byte-extra-len) (to-bytes extra-info))
+        (with-foreign-vector ((byte-message byte-message-len) (to-bytes message))
+          (let ((ret (%olm:sas-calculate-mac (sas sas)
+                                             byte-message byte-message-len
+                                             byte-extra byte-extra-len
+                                             mac-buf mac-buf-len)))
+            (check-error sas ret)
+            (setf res (cffi:foreign-string-to-lisp mac-buf
+                                                   :count (1- mac-buf-len)))))))
+    res))
+
+          
 
 (defmethod calculate-mac-long-kdf ((sas sas) (message string) (extra-info string))
   "Generate a message authentication code based on the shared secret.
 
         This function should not be used unless compatibility with an older
         non-tagged Olm version is required."
-  (cffi:with-foreign-pointer-as-string ((mac-buf mac-buf-len)
-                                        (%olm:sas-mac-length (sas sas)))
-    (with-foreign-vector ((byte-extra byte-extra-len) (to-bytes extra-info))
-      (with-foreign-vector ((byte-message byte-message-len) (to-bytes message))
-        (check-error sas
-                     (%olm:sas-calculate-mac-long-kdf (sas sas)
+  (let ((res ()))
+    (cffi:with-foreign-string ((mac-buf mac-buf-len)
+                               (make-string (%olm:sas-mac-length (sas sas))))
+      (with-foreign-vector ((byte-extra byte-extra-len) (to-bytes extra-info))
+        (with-foreign-vector ((byte-message byte-message-len) (to-bytes message))
+          (let ((ret (%olm:sas-calculate-mac-long-kdf (sas sas)
                                                       byte-message byte-message-len
                                                       byte-extra byte-extra-len
-                                                      mac-buf mac-buf-len))))))
+                                                      mac-buf mac-buf-len)))
+            (check-error sas ret)
+            (setf res (cffi:foreign-string-to-lisp mac-buf
+                                                   :count (1- mac-buf-len)))))))
+    res))
 
 
 

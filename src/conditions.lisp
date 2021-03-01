@@ -26,6 +26,38 @@ SEARCHED-FOR but none were found.")
     :accessor message-type
     :initarg :message-type)))
 
+(define-condition empty-string (olm-error)
+  ())
+
+(define-condition empty-one-time-key (empty-string)
+  ((one-time-key
+    :accessor one-time-key
+    :initarg :one-time-key))
+  (:documentation "Signalled when an empty one-time-key has been passed to a fun")
+  (:report
+   (lambda (obj stream)
+     (format stream "~&One-time-key is empty.~%otk: ~A~%" (one-time-key obj)))))
+
+(define-condition empty-id-key (empty-string)
+  ((id-key
+    :accessor id-key
+    :initarg :id-key))
+  (:documentation "Signalled when an empty id-key has been passed to a fun")
+  (:report
+   (lambda (obj stream)
+     (format stream "~&id-key is empty.~%id-key: ~A~%" (id-key obj)))))
+
+
+
+(define-condition empty-ciphertext (olm-error)
+  ((object
+    :accessor object
+    :initarg :object))
+  (:documentation "Signalled when ciphertext within object is empty")
+  (:report
+   (lambda (obj stream)
+     (format stream "~&Ciphertext can't be empty.~% Object: ~A~%" (object obj)))))
+
 (defun string->condition (string)
   "takes in a string (STRING) and looks in *conditions* for an associated condition
 if one is found then that condition is signalled, if not 'condition-missing is 

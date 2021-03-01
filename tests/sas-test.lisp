@@ -48,7 +48,7 @@
                       (create-sas a a-private 32);;changes a
                       (set-their-public-key a bob-key)
                       (let ((mac (calculate-mac a message extra-info)))
-                        (assert-true (string=  mac expected-mac))))
+                        (assert-true (string= mac expected-mac))))
       (cleanup a))))
 
 (sas-test long-mac-generating
@@ -61,3 +61,4 @@
         (bsm (calculate-mac bob %message %extra-info)))
     (assert-equal am bm)
     (assert-true (string/= am bsm))))
+

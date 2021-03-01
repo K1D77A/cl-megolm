@@ -19,14 +19,14 @@
 
 (defun make-olm-pre-key-message (ciphertext)
   "Create a make Olm prekey message with the supplied ciphertext"
-  (if (zerop (length ciphertext))
-      (error "Ciphertext can't be empty")
+  (if (string= ciphertext "")
+      (error 'empty-ciphertext :object nil)
       (%make-olm-message ciphertext %olm:*message-type-pre-key*)))
 
 (defun make-olm-message (ciphertext)
   "Create a new Olm message with the supplied ciphertext"
-  (if (zerop (length ciphertext))
-      (error "Ciphertext can't be empty")
+  (if (string= ciphertext "")
+      (error 'empty-ciphertext :object nil)
       (%make-olm-message ciphertext %olm:*message-type-message*)))
 
 (defmethod clear-session ((session session))
@@ -141,6 +141,18 @@ message was invalid then the condition will be 'bad-message-mac
                                         :count id-buf-len)
     (check-error session (%olm:session-id (session session) id-buf id-buf-len))))
 
+(defmethod matchesp :before ((session session) message id-key)
+  (unless (eql (type-of message) 'olm-message-pre-key)
+    (error 'invalid-message-type :message-type (type-of message))))
+
+(defmethod matchesp ((session session) message id-key)
+  ())
+
+(defmethod matchesp :before ((session session) (message olm-message-pre-key)
+                             id-key)
+  (when (string= "" (ciphertext message))
+    (error 'empty-ciphertext :object message)))
+
 (defmethod matchesp ((session session) (message olm-message-pre-key)
                      (id-key string))
   "Checks if the PRE_KEY message is for this in-bound session.
@@ -161,25 +173,22 @@ condition signalled will be * 'bad-message-format."
         (check-error session res)
         (to-bool res)))))
 
-(defmethod matchesp ((session session) (message olm-message-pre-key) id-key)
-  ""
-  (with-foreign-vector ((message-buf message-buf-len) (to-bytes
-                                                       (ciphertext message)))
-    (let ((res (%olm:matches-inbound-session (session session)
-                                             message-buf message-buf-len)))
-      (check-error session res)
-      (to-bool res))))
-
 (defmethod matchesp ((session session) (message olm-message-pre-key) (id-key null))
   ""
-  (cffi:with-foreign-string ((message-buf message-buf-len) (ciphertext message))
+  (with-foreign-vector ((message-buf message-buf-len)
+                        (to-bytes (ciphertext message)))
     (let ((res (%olm:matches-inbound-session (session session)
                                              message-buf message-buf-len)))
       (check-error session res)
       (to-bool res))))
 
 
-(defmethod make-inbound-session ((account account) (message %olm-message)
+(defmethod make-inbound-session :before ((account account)
+                                         (message olm-message-pre-key) id-key)
+  (when (string= "" (ciphertext message))
+    (error 'empty-ciphertext :object message)))
+
+(defmethod make-inbound-session ((account account) (message olm-message-pre-key)
                                  (id-key string))
   "Create a new inbound Olm session.
 
@@ -204,7 +213,8 @@ condition signalled will be * 'bad-message-format."
                                                        message-buf message-buf-len))
         inbound-session))))
 
-(defmethod make-inbound-session ((account account) (message %olm-message) id-key)
+(defmethod make-inbound-session ((account account) (message olm-message-pre-key)
+                                 id-key)
   ""
   (with-foreign-vector  ((message-buf message-buf-len)
                          (to-bytes (ciphertext message)))
@@ -216,6 +226,13 @@ condition signalled will be * 'bad-message-format."
                                                 message-buf message-buf-len))
       inbound-session)))
 
+(defmethod make-outbound-session :before ((account account) (one-time-key string)
+                                          (id-key string))
+  (cond ((string= "" one-time-key)
+         (error 'empty-one-time-key :one-time-key one-time-key))
+        ((string= "" id-key)
+         (error 'empty-id-key :id-key id-key))
+        (t t)))
 
 (defmethod make-outbound-session ((account account) (one-time-key string)
                                   (id-key string))

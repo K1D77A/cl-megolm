@@ -41,7 +41,7 @@
                              (progn ,@body)
                            (olm-error ()
                              (assert-true nil)))
-           (progn (cleanupoutbound)
+           (progn (cleanup outbound)
                   (cleanup inbound)))))))
 
 (defmacro inbound-group-test (name &body body)
@@ -124,10 +124,10 @@
                         (push sesh ,to-clean)
                         (values a1 a2 sesh)))))
              (unwind-protect
-                  (handler-case
-                      (progn ,@body)
-                    (olm-error (c)
-                      (print c)))
+                  ;; (handler-case
+                  (progn ,@body)
+               ;; (olm-error (c)
+               ;;  (print c)))
                (progn (cleanup alice)
                       (cleanup bob)
                       (mapc #'cleanup ,to-clean)))))))))

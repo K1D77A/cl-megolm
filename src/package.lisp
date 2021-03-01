@@ -88,6 +88,11 @@
            #:mac
            #:ciphertext
            #:create-sas
+           #:empty-ciphertext
+           #:empty-one-time-key
+           #:empty-id-key
+           #:id-key
+           #:one-time-key
            #:generate-one-time-keys
            #:one-time-keys
            #:olm-sas-their-key-not-set
