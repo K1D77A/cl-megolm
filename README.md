@@ -5,7 +5,7 @@ These create usable bindings over the top of the Olm/Megolm library used for enc
 
 ## Memory management
 
-Its important that you run (cleanup <object>) on the instances of the classes
+Its important that you run `(cleanup <object>)` on the instances of the classes
 
 - utility
 - inbound-group-session
@@ -17,7 +17,7 @@ Its important that you run (cleanup <object>) on the instances of the classes
 - pk-decryption
 - account
 
-If you do not run (cleanup ..) on these after you are done with them the memory will not get cleaned up.
+If you do not run `(cleanup ..)` on these after you are done with them the memory will not get cleaned up.
 
 ## Running the tests
 
