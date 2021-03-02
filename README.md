@@ -1,6 +1,35 @@
 # cl-megolm
 These create usable bindings over the top of the Olm/Megolm library used for encryption on the matrix protocol see [here](https://gitlab.matrix.org/matrix-org/olm/-/tree/master/)
 
+# A few notes
+
+## Memory management
+
+Its important that you run (cleanup <object>) on the instances of the classes
+
+- utility
+- inbound-group-session
+- outbound-group-session
+- session
+- sas
+- pk-signing
+- pk-encryption
+- pk-decryption
+- account
+
+If you do not run (cleanup ..) on these after you are done with them the memory will not get cleaned up.
+
+## Running the tests
+
+To run the tests for `cl-megolm` run:
+
+(ql:quickload :cl-megolm)
+(in-package :cl-megolm)
+(asdf:test-system :cl-megolm)
+
+If you find that any of the 71 tests fail, please create an issue and let me know.
+
+
 # Accounts
 
 ## Creating accounts
@@ -141,6 +170,7 @@ All conditions are a subclass of `olm-error`. All the conditions
 that will be signalled listed in [src/conditions.lisp](https://github.com/K1D77A/cl-megolm/blob/master/src/conditions.lisp)
 If at any point the condition `condition-missing` is signalled, please create an
 issue with the stacktrace and I will add the condition.
+
 
 
 
