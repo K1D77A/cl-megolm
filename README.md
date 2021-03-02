@@ -23,9 +23,11 @@ If you do not run `(cleanup ..)` on these after you are done with them the memor
 
 To run the tests for `cl-megolm` run:
 
+```lisp
 (ql:quickload :cl-megolm)
 (in-package :cl-megolm)
 (asdf:test-system :cl-megolm)
+```
 
 If you find that any of the 71 tests fail, please create an issue and let me know.
 
