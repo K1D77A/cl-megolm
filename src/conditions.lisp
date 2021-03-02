@@ -47,8 +47,6 @@ SEARCHED-FOR but none were found.")
    (lambda (obj stream)
      (format stream "~&id-key is empty.~%id-key: ~A~%" (id-key obj)))))
 
-
-
 (define-condition empty-ciphertext (olm-error)
   ((object
     :accessor object
@@ -68,15 +66,12 @@ signalled."
           (error condition)
           (error 'condition-missing :searched-for string)))))
 
-
-
 (defmacro def-trivial-condition (name supers)
   (let ((string (str:replace-all "-" "_" (string-upcase (format nil "~A" name)))))
     `(prog1 (define-condition ,name ,supers ())
        (setf (gethash ,string *conditions*) ',name))))
 
 (def-trivial-condition bad-session-key (olm-error))
-
 (def-trivial-condition unknown-pickle-version (olm-error))
 (def-trivial-condition bad-signature (olm-error))
 (def-trivial-condition not-enough-random (olm-error))
