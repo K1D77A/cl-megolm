@@ -91,7 +91,7 @@ Sessions are used to create peer to peer encrypted channels between two accounts
            (cleanup bob))))
 #<OUTBOUND-SESSION {10069C3763}>
 ```
-Its important to remember to run (cleanup ..) on the session you created once you
+Its important to remember to run `(cleanup ..)` on the session you created once you
 are done as this frees the foreign pointer and runs the appropriate olm function.
 
 ## Encryption and Decryption with Sessions
