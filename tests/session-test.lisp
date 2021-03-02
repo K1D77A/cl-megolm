@@ -106,7 +106,6 @@
            (let ((new-session (make-session)))
              (unwind-protect 
                   (let ((new-message (encrypt new-session plaintext)))
-                    (print "doof")
                     (assert-false (matchesp bob-session new-message nil)))
                (cleanup new-session)))
         (cleanup bob-session)))))

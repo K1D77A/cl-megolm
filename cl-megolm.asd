@@ -37,7 +37,8 @@ Borodust for creating the initial bindings using Claw."
   :author "K1D77A"
   :license "MIT"
   :depends-on (#:cl-megolm
-               #:lisp-unit)
+               #:lisp-unit
+               #:s-base64)
   :components ((:module "tests"
                 :serial t
                 :components

@@ -101,8 +101,6 @@
                 (setf res (cffi:foreign-string-to-lisp cipher-buf
                                                        :count len
                                                        ))))))))
-
-    (print res)
     (%make-olm-message res message-type)))
 
 (defmethod decrypt ((session session) (message %olm-message))

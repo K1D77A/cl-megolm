@@ -43,14 +43,13 @@ failure."
       ;; need to do an unwind-protect, allocate, free either in your
       ;; own macro or manually.
       (clean-after ((foreign-key foreign-key-length))
-        (setf res
-              (cffi:with-foreign-pointer-as-string (p-buffer p-length)
-                (check-error account
-                             (%olm:pickle-account (account account)
-                                                  foreign-key
-                                                  foreign-key-length
-                                                  p-buffer
-                                                  p-length))))))
+        (check-error account
+                     (%olm:pickle-account (account account)
+                                          foreign-key
+                                          foreign-key-length
+                                          p-buffer
+                                          p-length))
+        (setf res (cffi:foreign-string-to-lisp p-buffer))))
     res))
 
 (defmethod from-pickle ((type (eql :account)) (pickle string) (passphrase string))

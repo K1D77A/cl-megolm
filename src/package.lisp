@@ -93,6 +93,7 @@
            #:empty-id-key
            #:id-key
            #:one-time-key
+           #:to-bytes
            #:generate-one-time-keys
            #:one-time-keys
            #:olm-sas-their-key-not-set
