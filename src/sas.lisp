@@ -79,8 +79,6 @@
                                                    :count (1- mac-buf-len)))))))
     res))
 
-          
-
 (defmethod calculate-mac-long-kdf ((sas sas) (message string) (extra-info string))
   "Generate a message authentication code based on the shared secret.
 

@@ -6,7 +6,7 @@ See: https://gitlab.matrix.org/matrix-org/olm/-/blob/master/python/. Big thanks 
 Borodust for creating the initial bindings using Claw."
   :author "K1D77A"
   :license  "MIT"
-  :version "1.0.0"
+  :version "1.0.1"
   :in-order-to ((asdf:test-op (asdf:load-op "cl-megolm/tests")))
   :perform (asdf:test-op (o c)
                          (uiop:symbol-call

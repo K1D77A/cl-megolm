@@ -10,7 +10,7 @@
   (let* ((plaintext "Its a secret to everyone")
          (encrypted (encrypt encryption plaintext)))
     (setf (ephemeral encrypted) "oogly")
-    (assert-error 'bad-message-mac (decrypt decryption encrypted))))
+    (assert-error 'invalid-base64 (decrypt decryption encrypted))))
 
 (pk-test pickling
   (let* ((plaintext "abc")
@@ -27,9 +27,4 @@
   (let* ((signature (sign signing "abc"))
          (key (public-key signing)))
     (assert-true (ed25519-verify-p key "abc" signature))))
-
-
-
-
-
 
