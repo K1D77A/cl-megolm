@@ -16,6 +16,8 @@ Borodust for creating the initial bindings using Claw."
                #:claw-olm
                #:jonathan
                #:cffi
+               #:lisp-unit
+               #:s-base64
                #:str
                #:alexandria)
   :components ((:module :src
